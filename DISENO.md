@@ -124,7 +124,12 @@ Con B2 mantenido (sembrando), presionar B4 cancela la siembra.
 - Reinicio por inactividad a los 90 s.
 
 ### Registro de cambios
-(vacío; el agente anota acá toda decisión que cambie durante la implementación, con fecha)
+
+**2026-11-04**
+- Correcciones a `ESPECIFICACION.md` pedidas por Maxi: T-07 aplica solo a ediciones de **posición** (el cambio de origen lo cubre T-10); R-33 define que al cambiar `n` durante la siembra se recalculan `C`, `t` y `S`, el ancla se recalcula como en R-17 y se reinician los `fired`. Se agregan T-19 (R-21) y T-20 (R-13/R-20).
+- Consecuencia audible de la corrección de R-33: cambiar `n` durante la siembra reinicia la fase del organismo. Se evalúa a oído en M6.
+- Entorno de desarrollo: Godot 4.7.2; los tests se corren con `tools\run_tests.ps1`, que es el único archivo con la ruta del binario.
+- Proceso: repositorio git con un commit por hito; `config.gd` es `class_name Config` con `const`; el azar se inyecta por constructor.
 
 ## 10. Fuera de alcance v1
 
