@@ -1,0 +1,11 @@
+# Caché e importaciones de Godot 4
+.godot/
+/android/
+
+# Salidas de export
+/build/
+/export/
+
+# Basura del sistema
+Thumbs.db
+.DS_Store
