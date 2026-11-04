@@ -35,6 +35,12 @@ func active_voices() -> int:
 	return 0 if _allocator == null else _allocator.active_count()
 
 
+# Enruta todas las voces al bus del organismo (R-26: brillo por bus).
+func set_bus(bus_name: String) -> void:
+	for player in _players:
+		player.bus = bus_name
+
+
 # Al desmontar el pool se cortan las voces y se sueltan los streams: si no, un
 # sonido en curso queda vivo en el servidor de audio después de cerrar.
 func _exit_tree() -> void:

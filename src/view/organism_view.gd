@@ -42,6 +42,15 @@ const FLOW_DOTS := 3
 const FLOW_DOT_RADIUS := 1.6
 const FLOW_ALPHA := 0.35
 
+# Anillo de selección: el nodo que el joystick está apuntando.
+const SELECTION_GAP := 6.0
+const SELECTION_WIDTH := 1.5
+
+# Temblor de rechazo (R-31): 150 ms sobre el nodo seleccionado.
+const SHAKE_TIME := 0.15
+const SHAKE_HZ := 12.0
+const SHAKE_AMPLITUDE := 4.0
+
 var _model: OrganismModel
 var _base_hue := 0.38
 var _time := 0.0
@@ -50,6 +59,9 @@ var _head := Vector2.ZERO
 var _has_head := false
 var _trail: Array[Vector2] = []
 var _flash: Array[float] = []
+var _selected := 0
+var _shake_node := -1
+var _shake_left := 0.0
 
 
 func setup(model: OrganismModel, family: int = 0) -> void:
@@ -61,6 +73,12 @@ func setup(model: OrganismModel, family: int = 0) -> void:
 	_flash.fill(0.0)
 	_trail.clear()
 	_has_head = false
+	_selected = 0
+	queue_redraw()
+
+
+func set_selection(node_index: int) -> void:
+	_selected = node_index
 	queue_redraw()
 
 
@@ -72,6 +90,13 @@ func flash(node_index: int) -> void:
 		_flash[index] = 1.0
 
 
+func shake(node_index: int) -> void:
+	if _model == null:
+		return
+	_shake_node = posmod(node_index, _model.n)
+	_shake_left = SHAKE_TIME
+
+
 # Avanza la animación visual. `phi_f` es la fase continua que calcula la escena
 # (R-21); `delta` solo mueve el suavizado, el brillo y las motas.
 func update_visuals(phi_f: float, delta: float) -> void:
@@ -79,6 +104,7 @@ func update_visuals(phi_f: float, delta: float) -> void:
 		return
 	_time += delta
 	_phase = phi_f
+	_shake_left = maxf(0.0, _shake_left - delta)
 	_update_head(phi_f, delta)
 	for i in _flash.size():
 		_flash[i] = maxf(0.0, _flash[i] - delta * FLASH_DECAY)
@@ -138,7 +164,7 @@ func _draw_flow() -> void:
 
 func _draw_nodes() -> void:
 	for i in _model.n:
-		var node := _model.nodes[i]
+		var node := _model.nodes[i] + _shake_offset(i)
 		var breath := 1.0 + BREATH_DEPTH * sin(_time * BREATH_SPEED + float(i) * BREATH_PHASE_STEP)
 		var swell := 1.0 + ANTICIPATION_DEPTH * _anticipation(i)
 		var is_origin := i == _model.origin
@@ -146,6 +172,9 @@ func _draw_nodes() -> void:
 		var radius := base_radius * breath * swell
 		var color := _node_color().lerp(Color.WHITE, _flash[i])
 
+		if i == _selected:
+			# El anillo dice qué nodo va a recibir el próximo gesto.
+			draw_arc(node, radius + SELECTION_GAP, 0.0, TAU, 40, Color(_pulse_color(), 0.85), SELECTION_WIDTH, true)
 		if is_origin:
 			draw_circle(node, radius * ORIGIN_HALO, Color(color, 0.14))
 		if _flash[i] > 0.0:
@@ -168,6 +197,14 @@ func _draw_pulse() -> void:
 		draw_circle(_trail[k], HEAD_RADIUS * 0.75 * fade, Color(trail_color, fade * fade * 0.6))
 	draw_circle(_head, HEAD_RADIUS * HEAD_HALO, Color(color, 0.16))
 	draw_circle(_head, HEAD_RADIUS, color)
+
+
+# Temblor de rechazo (R-31): oscilación horizontal corta que se apaga.
+func _shake_offset(node_index: int) -> Vector2:
+	if node_index != _shake_node or _shake_left <= 0.0:
+		return Vector2.ZERO
+	var strength := _shake_left / SHAKE_TIME
+	return Vector2(sin(_time * TAU * SHAKE_HZ) * SHAKE_AMPLITUDE * strength, 0.0)
 
 
 # Cuánto falta (en ticks) para que el pulso llegue a este nodo, como hinchazón

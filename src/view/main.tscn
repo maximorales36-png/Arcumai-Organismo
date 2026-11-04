@@ -30,7 +30,7 @@ layout_mode = 1
 offset_left = 24.0
 offset_top = 24.0
 offset_right = 824.0
-offset_bottom = 260.0
+offset_bottom = 330.0
 
 [node name="TickLabel" type="Label" parent="Overlay"]
 layout_mode = 2
@@ -46,6 +46,11 @@ text = "beat: 0"
 layout_mode = 2
 theme_override_font_sizes/font_size = 28
 text = "escala: 0   tónica: 0"
+
+[node name="SessionLabel" type="Label" parent="Overlay"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+text = "nodo: 0   variante: 0   brillo: 0.70"
 
 [node name="ActionLabel" type="Label" parent="Overlay"]
 layout_mode = 2

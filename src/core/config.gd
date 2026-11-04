@@ -44,6 +44,8 @@ const BRIDGE_DELAY_TICKS := 2
 # --- Audio ---
 const VOICE_CAP := 16
 const SAMPLE_ROOT_MIDI := 60
+const FAMILY_COUNT := 3
+const VARIANT_COUNT := 3
 const FOCUS_OTHERS_DB := -9.0
 const FOCUS_OTHERS_LPF_HZ := 1200.0
 const FOCUS_FADE_S := 0.4
@@ -78,6 +80,10 @@ const INPUT_ACTIONS := [
 	"btn_4",
 ]
 
+# Los 4 botones, separados del joystick: el router los lee por flanco y las
+# direcciones por nivel.
+const BUTTON_ACTIONS := ["btn_1", "btn_2", "btn_3", "btn_4"]
+
 
 # Radio máximo del organismo: crece con la cantidad de pulsos (R_MAX(n)).
 static func r_max(n: int) -> float:
@@ -88,3 +94,8 @@ static func r_max(n: int) -> float:
 static func base_midi(n: int) -> int:
 	var t := float(n - 2) / 6.0
 	return int(round(lerp(60.0, 36.0, t)))
+
+
+# R-26: el brillo mueve el corte del pasabajos entre 800 Hz y 16 kHz.
+static func cutoff_hz(brightness: float) -> float:
+	return 800.0 * pow(20.0, clampf(brightness, 0.0, 1.0))

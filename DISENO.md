@@ -166,6 +166,18 @@ Con B2 mantenido (sembrando), presionar B4 cancela la siembra.
 - Las motas de flujo usan fases fijas por índice en vez de RNG: son puramente visuales y así la vista es estable sin inyectar azar.
 - `VoicePool._exit_tree` corta las voces al desmontarse. Sin eso, una nota sonando al cerrar deja vivo el `AudioStreamWAV` y ensucia la consola de salida.
 
+**2026-11-04 (M5)**
+- La navegación por vecindad (R-30) es una función pura (`Selection.pick`), compartida por nodos y organismos: recibe la referencia, la dirección y los candidatos, y devuelve el índice. La usa Micro ahora y Macro en M6.
+- El auto-repetición del joystick se mide en segundos con el `delta` de la escena, no con `Timer` ni con ticks: es una regla de entrada, no de tiempo musical. `NAV_REPEAT_FIRST_MS` y `NAV_REPEAT_MS` ya estaban en `Config`; el router solo los consume.
+- Los botones se procesan antes que el joystick en cada frame: si B1 y un empuje llegan juntos, el gesto ya está activo y el empuje cuenta como arrastre, no como navegación (R-32).
+- R-32 se interpreta sobre el joystick, no sobre la posición: si el joystick estuvo fuera de cero en algún momento de la pulsación, fue arrastre aunque la geometría haya impedido mover el nodo. Así un tap nunca cambia el origen por accidente.
+- El tap de B1 se decide al soltar (R-32). No hay umbral de tiempo: lo que distingue tap de arrastre es si hubo empuje.
+- B2 toca de inmediato la variante nueva con el mismo camino que un disparo normal. La especificación no pide un preview, pero sin él el cambio no tendría respuesta audible hasta el próximo ciclo (criterio `[OJO]` de M5: menos de 1 s).
+- El brillo (R-26, R-35) vive en la sesión y se aplica al bus del organismo (`OrganismBus`), no a las voces: cuando haya varios organismos cada uno tendrá su bus y su filtro. El mapeo `cutoff_hz = 800 * 20 ^ brillo` es el de la especificación.
+- B4 todavía no cambia de vista (Macro es M6): por ahora produce rechazo (R-31), que es lo que el plan permite.
+- El rechazo usa el mismo pool de voces que las notas, a -18 dB, y el temblor de 150 ms se dibuja en la vista sobre el nodo seleccionado. Ningún botón queda sin respuesta.
+- La selección se dibuja como un anillo alrededor del nodo; el temblor es cosmético y no toca la geometría del modelo.
+
 ## 10. Fuera de alcance v1
 
 - Ciclo elástico (el ciclo dura lo que dicta la geometría).

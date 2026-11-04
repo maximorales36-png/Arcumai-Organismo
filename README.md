@@ -22,8 +22,22 @@ godot --path .
 
 La escena `src/view/main.tscn` es la de depuración: muestra el organismo como
 micelio (nodos, hifas curvas, pulso con cabeza y cola), el overlay con tick,
-beat, escala, última acción, última nota y FPS, y hace sonar un nodo cada vez
-que el pulso lo dispara.
+beat, escala, nodo seleccionado, variante, brillo, última acción, última nota y
+FPS, y hace sonar un nodo cada vez que el pulso lo dispara.
+
+### Controles (vista Micro)
+
+| Acción | Teclado | Efecto |
+|---|---|---|
+| Joystick | W / A / S / D | Selecciona el nodo contiguo en esa dirección (mantener repite) |
+| B1 mantener + joystick | H + WASD | Arrastra el nodo seleccionado |
+| B1 tap | H | El nodo seleccionado pasa a ser el origen |
+| B2 tap | J | Cambia la variante de sonido del nodo seleccionado |
+| B3 mantener + arriba/abajo | K + W/S | Brillo del organismo (arriba = más brillante) |
+| B4 | L | Todavía no hay Macro: produce rechazo |
+
+En el arcumai, el joystick y los botones llegan como un dispositivo USB; el
+mapeo de ejes y botones se ajusta cuando se pruebe en el hardware.
 
 ## Placeholders de audio
 
