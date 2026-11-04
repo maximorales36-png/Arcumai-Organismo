@@ -2,7 +2,7 @@
 .godot/
 /android/
 
-# Salidas de export
+# Salidas de export (los binarios no se versionan; export_presets.cfg sí)
 /build/
 /export/
 

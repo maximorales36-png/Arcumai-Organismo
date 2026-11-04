@@ -131,6 +131,12 @@ Con B2 mantenido (sembrando), presionar B4 cancela la siembra.
 - Entorno de desarrollo: Godot 4.7.2; los tests se corren con `tools\run_tests.ps1`, que es el único archivo con la ruta del binario.
 - Proceso: repositorio git con un commit por hito; `config.gd` es `class_name Config` con `const`; el azar se inyecta por constructor.
 
+**2026-11-04 (M0)**
+- Renderer `gl_compatibility`: la mini PC del arcumai no es de alta gama y el juego es 2D; es el que menos riesgo tiene en Fedora.
+- Resolución base 1280×720 con `canvas_items` + `expand`: el layout se adapta al viewport, la resolución real se fija en M9.
+- Input mapeado por `physical_keycode`: funciona igual con cualquier distribución de teclado.
+- Contrato de tests: cada `tests/test_*.gd` extiende `RefCounted` y expone `run() -> Array[Dictionary]`; `run_tests.gd` los descubre solo.
+
 ## 10. Fuera de alcance v1
 
 - Ciclo elástico (el ciclo dura lo que dicta la geometría).

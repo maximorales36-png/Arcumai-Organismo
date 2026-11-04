@@ -21,5 +21,12 @@ if (-not (Test-Path -LiteralPath $TestScript)) {
     exit 2
 }
 
+# Un clon limpio no tiene .godot/: sin esa importacion previa, los class_name
+# (Config) no existen y los tests no compilan.
+$ClassCache = Join-Path $ProjectRoot '.godot\global_script_class_cache.cfg'
+if (-not (Test-Path -LiteralPath $ClassCache)) {
+    & $GodotExe --headless --path $ProjectRoot --import | Out-Null
+}
+
 & $GodotExe --headless --path $ProjectRoot --script 'res://tests/run_tests.gd'
 exit $LASTEXITCODE

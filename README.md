@@ -11,6 +11,18 @@ Este archivo solo cubre cómo correr y empaquetar el proyecto.
 - Godot 4.7.2 (el editor usado en desarrollo).
 - Windows para desarrollar; Linux Fedora x86_64 como destino.
 
+## Correr el juego
+
+Abrí `project.godot` con el editor de Godot y ejecutá el proyecto (F5), o desde
+la terminal:
+
+```powershell
+godot --path .
+```
+
+En M0 la escena `src/view/main.tscn` solo muestra un fondo oscuro, la última
+acción de input recibida y los FPS.
+
 ## Correr los tests
 
 En Windows:
@@ -25,9 +37,19 @@ En Fedora:
 godot --headless --path . --script res://tests/run_tests.gd
 ```
 
-El runner sale con código 0 solo si todos los tests pasan.
+El runner descubre y corre todos los `tests/test_*.gd` y sale con código 0 solo
+si todos los tests pasan. La primera corrida importa el proyecto (genera
+`.godot/`), porque sin eso los `class_name` no existen.
 
 ## Export
 
-Preset de export **Linux x86_64** (pendiente de crear en M0). El export debe
-correr en Fedora sin dependencias extra.
+Preset **Linux x86_64** en `export_presets.cfg`. El binario va a `build/linux/`
+(ignorado por git):
+
+```powershell
+New-Item -ItemType Directory -Force build\linux
+godot --headless --path . --export-release "Linux x86_64" build/linux/cultivo.x86_64
+```
+
+Godot no crea la carpeta de destino: si no existe, el export falla. El export
+debe correr en Fedora sin dependencias extra (se prueba en M9).
