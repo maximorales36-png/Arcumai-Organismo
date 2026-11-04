@@ -171,6 +171,29 @@ func phase_at(tick: int) -> int:
 	return (tick - anchor_tick) % cycle_ticks
 
 
+# Posición derivada del pulso (R-21): función pura de lectura, sin nodos ni
+# efectos. Recibe la fase continua `phi + fracción_de_tick` y devuelve en qué
+# hifa va el pulso y qué fracción `u` de su largo recorrió. Antes del ancla no
+# hay pulso (`active == false`).
+func pulse_at(phi_f: float) -> Dictionary:
+	if phi_f < 0.0:
+		return {"active": false, "edge": -1, "u": 0.0}
+
+	# Al cruzar el fin del ciclo el pulso vuelve al principio: la fase continua
+	# puede llegar justo a cycle_ticks, y ese instante es el inicio del ciclo.
+	var wrapped := fposmod(phi_f, float(cycle_ticks))
+	var p := 0
+	while p + 1 < n and starts[p + 1] <= wrapped:
+		p += 1
+
+	var edge := (origin + p) % n
+	var ticks := edge_ticks[edge]
+	var u := 0.0
+	if ticks > 0:
+		u = clampf((wrapped - starts[p]) / float(ticks), 0.0, 1.0)
+	return {"active": true, "edge": edge, "u": u}
+
+
 # Curva de la hifa i, para que la vista la dibuje sin recalcular nada (R-13).
 func edge_curve(i: int) -> Curve2D:
 	return _curves[posmod(i, n)]

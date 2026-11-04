@@ -21,8 +21,9 @@ godot --path .
 ```
 
 La escena `src/view/main.tscn` es la de depuración: muestra el organismo como
-puntos, el overlay con tick, beat, escala, última acción, última nota y FPS, y
-hace sonar un nodo cada vez que el pulso lo dispara.
+micelio (nodos, hifas curvas, pulso con cabeza y cola), el overlay con tick,
+beat, escala, última acción, última nota y FPS, y hace sonar un nodo cada vez
+que el pulso lo dispara.
 
 ## Placeholders de audio
 

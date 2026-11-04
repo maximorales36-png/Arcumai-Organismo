@@ -1,7 +1,7 @@
-# Escena de depuración de M3: un organismo que suena al disparar.
+# Escena de depuración de M4: un organismo que suena y muestra su pulso.
 # Crea el OrganismModel con semilla fija, sortea escala y tónica (R-24), lo
 # dibuja con OrganismView y toca el placeholder de la familia 1 en cada disparo.
-# Recibe eventos de input; no emite nada.
+# La vista recibe la fase continua del reloj (R-21); el delta solo anima.
 
 extends Control
 
@@ -47,17 +47,27 @@ func _ready() -> void:
 	_sample = load(PLACEHOLDER_SAMPLE)
 	_model = OrganismModel.new(ORGANISM_ID, Config.N_DEFAULT, _clock.tick, rng)
 	_model.node_fired.connect(_on_node_fired)
-	_view.setup(_model)
+	_view.setup(_model, 0)
 
 	_center_view()
 	get_viewport().size_changed.connect(_center_view)
 
 
 # El reloj se alimenta con el delta real: es el único lugar donde el delta
-# decide tiempo musical, tal como pide R-02. Nada más usa delta acá.
+# decide tiempo musical (R-02). La vista lo usa solo para animar.
 func _process(delta: float) -> void:
 	_clock.advance(delta)
 	_fps_label.text = "FPS: %d" % Engine.get_frames_per_second()
+	_view.update_visuals(_current_phase_f(), delta)
+
+
+# Fase continua del organismo: tick entero más la fracción que ya corrió el
+# reloj. Antes del ancla no hay pulso y se informa -1 (R-17, R-21).
+func _current_phase_f() -> float:
+	var phase := _model.phase_at(_clock.tick)
+	if phase < 0:
+		return -1.0
+	return float(phase) + _clock.fraction()
 
 
 func _on_tick_emitted(tick: int) -> void:
@@ -71,6 +81,7 @@ func _on_tick_emitted(tick: int) -> void:
 # La altura del nodo se convierte en nota al momento del disparo: si se movió
 # el nodo, la nota nueva sale sola (R-23) sin recalcular nada por tick.
 func _on_node_fired(_organism_id: int, node_index: int, _tick: int, _is_echo: bool) -> void:
+	_view.flash(node_index)
 	var midi := PitchMapping.midi_for_node(_model.nodes[node_index].y, _model.n, _scale, _tonic)
 	_voices.play(_sample, PitchMapping.pitch_scale_for_midi(midi), NODE_SAMPLE_DB)
 	_note_label.text = "última nota: midi %d   pitch %.2f" % [midi, PitchMapping.pitch_scale_for_midi(midi)]

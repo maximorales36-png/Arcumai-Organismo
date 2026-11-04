@@ -157,6 +157,15 @@ Con B2 mantenido (sembrando), presionar B4 cancela la siembra.
 - Los placeholders de R-25 se generan con `tools/generate_placeholders.gd` y se versionan en `audio/placeholder/` con el nombre `family_<familia>_<variante>.wav`. Las muestras reales irán en `audio/<familia>/<variante>.wav`.
 - La escena de depuración usa una semilla fija (`DEV_SEED`) para que la geometría, la escala y la tónica sean las mismas en cada arranque. La vista dibuja puntos y hifas sin animación: el pulso y el flash son de M4.
 
+**2026-11-04 (M4)**
+- R-21 se implementa como `OrganismModel.pulse_at(phi_f)`: lectura pura de `S`, `t`, `origin` y el ciclo, sin nodos ni efectos. Devuelve la hifa en curso y el progreso `u`; T-19 lo verifica en todo el ciclo, incluida la fracción de tick, y contra los disparos reales.
+- La fracción de tick sale de `Clock.fraction()`, el mismo acumulador que decide los ticks: la vista no lleva un tiempo paralelo. El `delta` solo mueve el suavizado de 80 ms, el brillo y las motas.
+- El suavizado de R-21 se aplica a la posición 2D de la cabeza, no a `phi`: así absorbe tanto el cruce de fin de ciclo como los saltos por ediciones, sin tocar el tiempo musical.
+- La vista de depuración usa escala fija 3×: a 1:1 el organismo mide ~130 px y el pulso no se puede juzgar. El zoom animado con cámara es M7; esto es solo para poder evaluar V-01 y V-02.
+- Las constantes visuales (radios, respiración, anticipación, flash, velocidad de las motas, colores por familia) viven en `organism_view.gd`: son cosméticas y se ajustan a ojo.
+- Las motas de flujo usan fases fijas por índice en vez de RNG: son puramente visuales y así la vista es estable sin inyectar azar.
+- `VoicePool._exit_tree` corta las voces al desmontarse. Sin eso, una nota sonando al cerrar deja vivo el `AudioStreamWAV` y ensucia la consola de salida.
+
 ## 10. Fuera de alcance v1
 
 - Ciclo elástico (el ciclo dura lo que dicta la geometría).

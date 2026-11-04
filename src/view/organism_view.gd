@@ -1,39 +1,201 @@
-# Vista de depuración de un organismo (M3): dibuja cada nodo como un punto y
-# cada hifa como la polilínea de la curva que ya calculó el modelo.
-# Recibe el modelo con setup(); no decide nada del juego, solo pinta lo que el
-# núcleo resolvió. El nodo origen se marca con otro color.
-# Sin animación: el pulso y el flash llegan en M4.
+# Vista Micro de depuración (M4): dibuja el organismo como micelio y el pulso
+# como una cabeza luminosa con cola. Además: bulbos que respiran, motas de
+# flujo, anticipación y flash al disparar, y el nodo origen destacado.
+# Recibe el modelo con setup(), la fase continua con update_visuals() y los
+# disparos con flash(). Todo lo visual es cosmético: la posición del pulso la
+# decide OrganismModel.pulse_at (R-21) y el suavizado no toca el núcleo.
 
 class_name OrganismView
 extends Node2D
 
-const NODE_RADIUS := 7.0
-const ORIGIN_RADIUS := 10.0
-const EDGE_WIDTH := 2.0
-const COLOR_NODE := Color(0.65, 0.85, 0.75)
-const COLOR_ORIGIN := Color(1.0, 0.85, 0.45)
-const COLOR_EDGE := Color(0.35, 0.55, 0.5, 0.8)
+# El suavizado de R-21 es visual: constante de tiempo de 80 ms.
+const SMOOTH_TIME := 0.08
+
+# Escala de la vista de depuración: el zoom con cámara llega en M7, pero a
+# escala 1:1 el organismo mide ~130 px y el pulso no se lee. Es solo visual.
+const VIEW_SCALE := 3.0
+
+const NODE_RADIUS := 9.0
+const ORIGIN_RADIUS := 12.0
+const ORIGIN_HALO := 2.4
+const EDGE_WIDTH := 1.6
+
+const HEAD_RADIUS := 5.0
+const HEAD_HALO := 2.4
+const TRAIL_POINTS := 26
+
+# Respiración cosmética: no entra en el modelo ni altera tiempos (DISENO 5.1).
+const BREATH_DEPTH := 0.06
+const BREATH_SPEED := 1.6
+const BREATH_PHASE_STEP := 1.3
+
+# Anticipación: el nodo se hincha en el tick previo a la llegada (DISENO 5.2).
+const ANTICIPATION_DEPTH := 0.35
+
+# Flash y onda al disparar.
+const FLASH_DECAY := 3.5
+const WAVE_RADIUS := 26.0
+
+# Motas de flujo: deriva constante por el filamento (DISENO 5.2).
+const FLOW_SPEED := 45.0
+const FLOW_DOTS := 3
+const FLOW_DOT_RADIUS := 1.6
+const FLOW_ALPHA := 0.35
 
 var _model: OrganismModel
+var _base_hue := 0.38
+var _time := 0.0
+var _phase := -1.0
+var _head := Vector2.ZERO
+var _has_head := false
+var _trail: Array[Vector2] = []
+var _flash: Array[float] = []
 
 
-func setup(model: OrganismModel) -> void:
+func setup(model: OrganismModel, family: int = 0) -> void:
 	_model = model
+	# Cada familia tiene su matiz (DISENO 5.1): las 3 quedan separadas 0,24.
+	_base_hue = fposmod(0.38 + 0.24 * float(family), 1.0)
+	scale = Vector2(VIEW_SCALE, VIEW_SCALE)
+	_flash.resize(model.n)
+	_flash.fill(0.0)
+	_trail.clear()
+	_has_head = false
+	queue_redraw()
+
+
+func flash(node_index: int) -> void:
+	if _model == null:
+		return
+	var index := posmod(node_index, _model.n)
+	if index < _flash.size():
+		_flash[index] = 1.0
+
+
+# Avanza la animación visual. `phi_f` es la fase continua que calcula la escena
+# (R-21); `delta` solo mueve el suavizado, el brillo y las motas.
+func update_visuals(phi_f: float, delta: float) -> void:
+	if _model == null:
+		return
+	_time += delta
+	_phase = phi_f
+	_update_head(phi_f, delta)
+	for i in _flash.size():
+		_flash[i] = maxf(0.0, _flash[i] - delta * FLASH_DECAY)
 	queue_redraw()
 
 
 func _draw() -> void:
 	if _model == null:
 		return
+	_draw_edges()
+	_draw_flow()
+	_draw_nodes()
+	_draw_pulse()
 
-	# Primero las hifas: los nodos tienen que quedar encima.
+
+func _update_head(phi_f: float, delta: float) -> void:
+	var pulse := _model.pulse_at(phi_f)
+	if not pulse["active"]:
+		_trail.clear()
+		_has_head = false
+		return
+
+	var target := _point_on_edge(int(pulse["edge"]), float(pulse["u"]))
+	if not _has_head:
+		_head = target
+		_has_head = true
+	else:
+		# Suavizado exponencial: el peso no depende de los FPS. Absorbe los
+		# saltos que producen las ediciones sin tocar el tiempo musical.
+		_head = _head.lerp(target, 1.0 - exp(-delta / SMOOTH_TIME))
+	_trail.push_front(_head)
+	if _trail.size() > TRAIL_POINTS:
+		_trail.pop_back()
+
+
+func _draw_edges() -> void:
+	var color := _node_color().darkened(0.55)
 	for i in _model.n:
 		var points := _model.edge_curve(i).get_baked_points()
 		if points.size() >= 2:
-			draw_polyline(points, COLOR_EDGE, EDGE_WIDTH, true)
+			draw_polyline(points, color, EDGE_WIDTH, true)
 
+
+func _draw_flow() -> void:
+	var color := Color(_pulse_color(), FLOW_ALPHA)
 	for i in _model.n:
-		if i == _model.origin:
-			draw_circle(_model.nodes[i], ORIGIN_RADIUS, COLOR_ORIGIN)
-		else:
-			draw_circle(_model.nodes[i], NODE_RADIUS, COLOR_NODE)
+		var length := _model.edge_lengths[i]
+		if length <= 0.0:
+			continue
+		var curve := _model.edge_curve(i)
+		for k in FLOW_DOTS:
+			# Fase fija por mota: no hace falta azar y así la vista es estable.
+			var phase := fposmod(float(i) * 0.37 + float(k) / float(FLOW_DOTS), 1.0)
+			var offset := fposmod(_time * FLOW_SPEED + phase * length, length)
+			draw_circle(curve.sample_baked(offset), FLOW_DOT_RADIUS, color)
+
+
+func _draw_nodes() -> void:
+	for i in _model.n:
+		var node := _model.nodes[i]
+		var breath := 1.0 + BREATH_DEPTH * sin(_time * BREATH_SPEED + float(i) * BREATH_PHASE_STEP)
+		var swell := 1.0 + ANTICIPATION_DEPTH * _anticipation(i)
+		var is_origin := i == _model.origin
+		var base_radius := ORIGIN_RADIUS if is_origin else NODE_RADIUS
+		var radius := base_radius * breath * swell
+		var color := _node_color().lerp(Color.WHITE, _flash[i])
+
+		if is_origin:
+			draw_circle(node, radius * ORIGIN_HALO, Color(color, 0.14))
+		if _flash[i] > 0.0:
+			# La onda se aleja y se apaga mientras el bulbo vuelve a su color.
+			var wave := 1.0 - _flash[i]
+			draw_arc(node, radius + wave * WAVE_RADIUS, 0.0, TAU, 32, Color(color, _flash[i] * 0.7), 2.0, true)
+		draw_circle(node, radius, color)
+
+
+func _draw_pulse() -> void:
+	if not _has_head:
+		return
+	var color := _pulse_color()
+	# Cola: círculos que se achican y se apagan hacia atrás, como un cometa
+	# (DISENO 5.2). Se dibuja del más viejo al más nuevo para que la cabeza quede
+	# encima y la estela no tape el borde delantero.
+	var trail_color := _trail_color()
+	for k in range(_trail.size() - 1, 0, -1):
+		var fade := 1.0 - float(k) / float(_trail.size())
+		draw_circle(_trail[k], HEAD_RADIUS * 0.75 * fade, Color(trail_color, fade * fade * 0.6))
+	draw_circle(_head, HEAD_RADIUS * HEAD_HALO, Color(color, 0.16))
+	draw_circle(_head, HEAD_RADIUS, color)
+
+
+# Cuánto falta (en ticks) para que el pulso llegue a este nodo, como hinchazón
+# de 0 a 1 durante el último tick. Se usa fposmod para que la anticipación
+# también funcione al final del ciclo, cuando el arranque ya pasó.
+func _anticipation(node_index: int) -> float:
+	var p := posmod(node_index - _model.origin, _model.n)
+	var until := fposmod(float(_model.starts[p]) - _phase, float(_model.cycle_ticks))
+	if until > 0.0 and until <= 1.0:
+		return 1.0 - until
+	return 0.0
+
+
+func _point_on_edge(edge: int, u: float) -> Vector2:
+	var length := _model.edge_lengths[edge]
+	if length <= 0.0:
+		return _model.nodes[edge]
+	return _model.edge_curve(edge).sample_baked(clampf(u, 0.0, 1.0) * length)
+
+
+func _node_color() -> Color:
+	return Color.from_hsv(_base_hue, 0.45, 0.95)
+
+
+func _pulse_color() -> Color:
+	return Color.from_hsv(fposmod(_base_hue + 0.08, 1.0), 0.25, 1.0)
+
+
+# La cola usa el matiz saturado: a baja opacidad el color pálido se ve gris.
+func _trail_color() -> Color:
+	return Color.from_hsv(fposmod(_base_hue + 0.08, 1.0), 0.55, 1.0)

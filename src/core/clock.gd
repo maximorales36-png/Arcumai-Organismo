@@ -18,6 +18,12 @@ var tick: int = 0
 var _accumulator: float = 0.0
 
 
+# Fracción del tick en curso (0 a 1): es el "tiempo desde el último tick" que
+# pide R-21 para la posición visual del pulso. No altera el tiempo musical.
+func fraction() -> float:
+	return clampf(_accumulator / Config.TICK_SEC, 0.0, 1.0)
+
+
 # Avanza el reloj con el tiempo real transcurrido. Un solo frame puede
 # contener varios ticks (frame lento) y se emiten todos, en orden (R-02).
 func advance(delta: float) -> void:

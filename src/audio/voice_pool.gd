@@ -35,5 +35,13 @@ func active_voices() -> int:
 	return 0 if _allocator == null else _allocator.active_count()
 
 
+# Al desmontar el pool se cortan las voces y se sueltan los streams: si no, un
+# sonido en curso queda vivo en el servidor de audio después de cerrar.
+func _exit_tree() -> void:
+	for player in _players:
+		player.stop()
+		player.stream = null
+
+
 func _on_player_finished(index: int) -> void:
 	_allocator.release(index)
