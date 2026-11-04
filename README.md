@@ -22,16 +22,17 @@ godot --path .
 
 La escena `src/view/main.tscn` es la de depuración: arranca en Macro con tres
 organismos de distinto N (3, 4 y 5) que pulsan a la vez. B1 entra a la vista
-Micro del organismo seleccionado y B4 vuelve a Macro. El overlay muestra tick,
-beat, escala, modo, organismos, selección, variante, brillo, última acción,
-última nota y FPS.
+Micro del organismo seleccionado y B4 vuelve a Macro; la cámara hace un zoom de
+0,5 s y la mezcla por foco acompaña (en Micro el enfocado suena completo y los
+demás quedan atrás). El overlay muestra tick, beat, escala, modo, organismos,
+selección, variante, brillo, última acción, última nota y FPS.
 
 ### Controles (vista Macro)
 
 | Acción | Teclado | Efecto |
 |---|---|---|
 | Joystick | W / A / S / D | Selecciona el organismo vecino en esa dirección (mantener repite) |
-| B1 tap | H | Entra a Micro con el organismo seleccionado |
+| B1 tap | H | Zoom in al organismo seleccionado (pasa a Micro) |
 | B2 mantener | J | Siembra un organismo; izquierda/derecha cambia su N en vivo |
 | B2 soltar | J | Confirma la siembra |
 | B4 durante la siembra | L | Cancela y elimina el organismo sembrado |
@@ -47,7 +48,7 @@ beat, escala, modo, organismos, selección, variante, brillo, última acción,
 | B1 tap | H | El nodo seleccionado pasa a ser el origen |
 | B2 tap | J | Cambia la variante de sonido del nodo seleccionado |
 | B3 mantener + arriba/abajo | K + W/S | Brillo del organismo (arriba = más brillante) |
-| B4 | L | Vuelve a Macro |
+| B4 | L | Vuelve a Macro (zoom out) |
 
 En el arcumai, el joystick y los botones llegan como un dispositivo USB; el
 mapeo de ejes y botones se ajusta cuando se pruebe en el hardware.

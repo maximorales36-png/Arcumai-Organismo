@@ -1,10 +1,10 @@
 # Vista de un organismo: dibuja el micelio y el pulso como una cabeza luminosa
 # con cola. Además: bulbos que respiran, motas de flujo, anticipación y flash al
-# disparar, nodo origen destacado, anillo de selección y aura de Macro.
+# disparar, nodo origen destacado, anillo de selección y aura de foco.
 # Recibe el modelo con setup(), la fase continua con update_visuals() y los
-# disparos con flash(). La escala y la posición las decide la escena, porque
-# cambian entre Macro y Micro. Todo lo visual es cosmético: la posición del
-# pulso la decide OrganismModel.pulse_at (R-21) y el suavizado no toca el núcleo.
+# disparos con flash(). La escala, la posición y la cámara las decide la escena.
+# Todo lo visual es cosmético: la posición del pulso la decide
+# OrganismModel.pulse_at (R-21) y el suavizado no toca el núcleo.
 
 class_name OrganismView
 extends Node2D
@@ -66,7 +66,7 @@ var _has_head := false
 var _trail: Array[Vector2] = []
 var _flash: Array[float] = []
 var _selected := -1
-var _macro_selected := false
+var _aura_strength := 0.0
 var _fade_target := 1.0
 var _shake_node := -1
 var _shake_whole := false
@@ -82,7 +82,7 @@ func setup(model: OrganismModel, family: int = 0) -> void:
 	_trail.clear()
 	_has_head = false
 	_selected = -1
-	_macro_selected = false
+	_aura_strength = 0.0
 	_shake_node = -1
 	_shake_whole = false
 	_shake_left = 0.0
@@ -97,9 +97,10 @@ func set_selection(node_index: int) -> void:
 	queue_redraw()
 
 
-# Aura del organismo seleccionado en Macro (DISENO 5.3).
-func set_macro_selected(value: bool) -> void:
-	_macro_selected = value
+# Intensidad del aura de foco (0 a 1). En Macro está en 1 para el seleccionado;
+# la cámara la apaga al entrar a Micro, donde el centro ya dice cuál es.
+func set_aura_strength(value: float) -> void:
+	_aura_strength = clampf(value, 0.0, 1.0)
 	queue_redraw()
 
 
@@ -152,7 +153,7 @@ func _draw() -> void:
 	var whole := _whole_shake_offset()
 	if whole != Vector2.ZERO:
 		draw_set_transform(whole, 0.0, Vector2.ONE)
-	if _macro_selected:
+	if _aura_strength > 0.0:
 		_draw_aura()
 	_draw_edges()
 	_draw_flow()
@@ -163,8 +164,8 @@ func _draw() -> void:
 func _draw_aura() -> void:
 	var radius := Config.r_max(_model.n) + AURA_GAP
 	var color := _pulse_color()
-	draw_circle(Vector2.ZERO, radius, Color(color, AURA_ALPHA))
-	draw_arc(Vector2.ZERO, radius, 0.0, TAU, 64, Color(color, AURA_RING_ALPHA), AURA_RING_WIDTH, true)
+	draw_circle(Vector2.ZERO, radius, Color(color, AURA_ALPHA * _aura_strength))
+	draw_arc(Vector2.ZERO, radius, 0.0, TAU, 64, Color(color, AURA_RING_ALPHA * _aura_strength), AURA_RING_WIDTH, true)
 
 
 func _update_head(phi_f: float, delta: float) -> void:

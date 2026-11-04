@@ -1,8 +1,8 @@
-# Escena de depuración de M6: el mundo Macro con varios organismos y su
-# gestión. Mantiene el estado de vista (Macro/Micro) y traduce los gestos a las
-# reglas del World (selección, siembra, disolución) o de la MicroSession del
-# organismo enfocado. Crea una vista y un bus por organismo; las reglas viven
-# en World y MicroSession, no acá.
+# Escena de depuración de M7: el mundo Macro, la cámara que entra y sale del
+# organismo seleccionado, y la mezcla por foco. Traduce los gestos a las reglas
+# del World (selección, siembra, disolución) o de la MicroSession del organismo
+# enfocado. Crea una vista y un bus por organismo; las reglas viven en World,
+# MicroSession y OrganismBus, no acá.
 
 extends Control
 
@@ -19,11 +19,12 @@ const REJECT_DB := -18.0
 const REJECT_FREQ_HZ := 110.0
 const REJECT_SEC := 0.09
 
-# Escala de dibujo de Micro: la misma de M4/M5, para poder juzgar el pulso.
+# Escala aparente de Micro: la misma de M4/M5, para poder juzgar el pulso.
 const MICRO_VIEW_SCALE := 3.0
-# Macro dibuja el mundo entero escalado al viewport; MACRO_ORG_SCALE es la
-# escala de la especificación y este multiplicador es cosmético, para que los
-# nodos se puedan contar en 1280x720. La cámara de M7 lo reemplaza.
+# MACRO_ORG_SCALE (0.3) es la escala de dibujo de la especificación. Este
+# multiplicador cosmético mantiene legibles los nodos en la ventana de
+# desarrollo 1280x720; la calibración final depende de la resolución del
+# arcumai (M9). La cámara de M7 anima el zoom, no cambia esta escala.
 const MACRO_DEBUG_SCALE := 2.5
 
 # Tres organismos de distinto N y familia para ver polimetría y V-02 en Macro.
@@ -46,6 +47,10 @@ var _clock := Clock.new()
 var _router := InputRouter.new()
 var _world: World
 var _mode := MODE_MACRO
+# 0 = Macro, 1 = Micro. La cámara y el aura lo siguen; el modo de input cambia
+# en el acto para que los botones respondan sin esperar la animación.
+var _zoom := 0.0
+var _zoom_target := 0.0
 var _samples: Array[AudioStream] = []
 var _reject_stream: AudioStream
 var _scale: Array = []
@@ -107,6 +112,9 @@ func _process(delta: float) -> void:
 			organism.session.update(_stick, delta)
 	_world.update(delta)
 	_update_fades()
+	_update_zoom(delta)
+	_update_buses(delta)
+	_layout_views()
 	for organism in _world.organisms:
 		var view: OrganismView = _views.get(organism.id)
 		if view != null and view.visible:
@@ -244,7 +252,9 @@ func _enter_micro() -> void:
 	if organism == null:
 		return
 	_mode = MODE_MICRO
+	_zoom_target = 1.0
 	organism.session.reset_gestures()
+	_update_focus_targets()
 	_layout_views()
 	_update_labels()
 
@@ -254,6 +264,8 @@ func _exit_micro() -> void:
 	if organism != null:
 		organism.session.reset_gestures()
 	_mode = MODE_MACRO
+	_zoom_target = 0.0
+	_update_focus_targets()
 	_layout_views()
 	_update_labels()
 
@@ -275,6 +287,7 @@ func _on_organism_added(organism: OrganismState) -> void:
 	organism.session.variant_changed.connect(_on_node_variant_changed)
 	organism.session.brightness_changed.connect(_on_node_brightness_changed)
 	organism.session.rejected.connect(_on_node_rejected)
+	_update_focus_targets()
 	_layout_views()
 	_update_labels()
 
@@ -298,6 +311,7 @@ func _on_organism_removed(organism: OrganismState) -> void:
 		view.queue_free()
 		_views.erase(organism.id)
 
+	_update_focus_targets()
 	_layout_views()
 	_update_labels()
 
@@ -312,6 +326,7 @@ func _on_organism_rebuilt(organism: OrganismState) -> void:
 
 
 func _on_world_selection_changed(_organism: OrganismState) -> void:
+	_update_focus_targets()
 	_layout_views()
 	_update_labels()
 
@@ -374,39 +389,65 @@ func _reject(organism: OrganismState) -> void:
 		view.shake(organism.session.selected)
 
 
-# El mundo entero entra en el viewport en Macro; en Micro se centra solo el
-# organismo enfocado. El cambio es directo: la animación de cámara es M7.
+# La cámara tarda ZOOM_TIME_S en llegar (DISENO 5.3). El delta solo anima la
+# vista; ningún disparo depende de esto.
+func _update_zoom(delta: float) -> void:
+	_zoom = move_toward(_zoom, _zoom_target, delta / Config.ZOOM_TIME_S)
+
+
+# R-36: el foco se funde en FOCUS_FADE_S. Se actualiza por frame porque la
+# mezcla es audio, no tiempo musical.
+func _update_buses(delta: float) -> void:
+	for bus: OrganismBus in _buses.values():
+		bus.update(delta)
+
+
+# R-36: en Macro todos al frente; en Micro solo el enfocado. Los demás bajan
+# de volumen y de corte, pero no desaparecen.
+func _update_focus_targets() -> void:
+	var focused := _world.selected_organism()
+	for organism in _world.organisms:
+		var bus: OrganismBus = _buses.get(organism.id)
+		if bus == null:
+			continue
+		bus.set_focused(_mode == MODE_MACRO or organism == focused)
+
+
+# La cámara encuadra el mundo entero en Macro y centra el organismo enfocado en
+# Micro (DISENO 5.3). La escala de dibujo de los organismos no cambia: lo que
+# cambia es la cámara, y _zoom la interpola durante ZOOM_TIME_S.
 func _layout_views() -> void:
 	var size := get_viewport_rect().size
-	if _mode == MODE_MACRO:
-		var fit := minf(size.x / Config.WORLD_SIZE.x, size.y / Config.WORLD_SIZE.y)
-		_world_layer.position = size * 0.5
-		_world_layer.scale = Vector2(fit, fit)
-		for organism in _world.organisms:
-			var view: OrganismView = _views.get(organism.id)
-			if view == null:
-				continue
-			view.visible = true
-			view.position = organism.position - Config.WORLD_SIZE * 0.5
-			view.scale = Vector2.ONE * Config.MACRO_ORG_SCALE * MACRO_DEBUG_SCALE
-			view.set_macro_selected(organism == _world.selected_organism())
-			view.set_selection(-1)
-		return
-
-	_world_layer.position = size * 0.5
-	_world_layer.scale = Vector2.ONE
+	var fit := minf(size.x / Config.WORLD_SIZE.x, size.y / Config.WORLD_SIZE.y)
+	var view_scale := Config.MACRO_ORG_SCALE * MACRO_DEBUG_SCALE
+	var micro_zoom := MICRO_VIEW_SCALE / view_scale
+	var t := _smoothstep(_zoom)
 	var selected := _world.selected_organism()
+	var center := Config.WORLD_SIZE * 0.5
+	if selected != null:
+		center = center.lerp(selected.position, t)
+	var camera_scale := lerpf(fit, micro_zoom, t)
+	_world_layer.scale = Vector2(camera_scale, camera_scale)
+	_world_layer.position = size * 0.5 - center * camera_scale
+
 	for organism in _world.organisms:
 		var view: OrganismView = _views.get(organism.id)
 		if view == null:
 			continue
 		var is_selected := organism == selected
-		view.visible = is_selected
-		if is_selected:
-			view.position = Vector2.ZERO
-			view.scale = Vector2.ONE * MICRO_VIEW_SCALE
-			view.set_macro_selected(false)
-			view.set_selection(organism.session.selected)
+		view.visible = true
+		view.position = organism.position
+		view.scale = Vector2.ONE * view_scale
+		# El aura del seleccionado se apaga en la primera mitad del zoom: si no,
+		# al agrandarse la cámara queda un círculo enorme alrededor del organismo.
+		view.set_aura_strength(clampf(1.0 - t * 2.0, 0.0, 1.0) if is_selected else 0.0)
+		view.set_selection(organism.session.selected if (is_selected and _mode == MODE_MICRO) else -1)
+
+
+# Suaviza el arranque y la llegada de la cámara. La forma no está fijada por la
+# especificación: es cosmética.
+func _smoothstep(t: float) -> float:
+	return t * t * (3.0 - 2.0 * t)
 
 
 # R-34: el organismo seleccionado se desvanece mientras se mantiene B4; si se

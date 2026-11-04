@@ -192,6 +192,17 @@ Con B2 mantenido (sembrando), presionar B4 cancela la siembra.
 - B3 en Macro (puentes) todavía produce rechazo: los puentes son M8.
 - Al salir con notas sonando, Godot puede reportar `AudioStreamWAV`/`AudioStreamPlaybackWAV` filtrados: es el bug conocido del `AudioServer`, que retiene el playback hasta el próximo mix y al cerrar no lo hay. No es un ciclo del proyecto y no afecta al runner.
 
+**2026-11-04 (M7)**
+- La cámara es un parámetro `_zoom` de 0 a 1 que avanza en `ZOOM_TIME_S`; la escena interpola el encuadre entre el mundo entero (Macro) y el organismo seleccionado centrado (Micro). No se mueve ningún nodo: cambia la transformación de `WorldLayer`.
+- La escala de dibujo de los organismos no cambia entre vistas: `MACRO_ORG_SCALE` (con el multiplicador de legibilidad de la escena de desarrollo) y la cámara hacen el resto. Así el zoom es continuo y no hay saltos de escala.
+- El encuadre usa una curva suave solo para la cámara; el parámetro llega a los extremos en 0,5 s. El modo de input cambia en el acto, así B1/B4 responden aunque la cámara esté a mitad de camino; si se cambia de idea, la cámara reorienta sin saltar.
+- El aura del organismo seleccionado se apaga en la primera mitad del zoom para que no quede un círculo enorme alrededor del organismo agrandado.
+- R-36 vive en `OrganismBus`: volumen de bus y corte del pasabajos con fundido de `FOCUS_FADE_S`. El volumen se interpola en dB y el corte en escala logarítmica (en Hz lineales el cierre se siente de golpe al final).
+- En Macro todos los buses quedan a 0 dB y con su corte propio; en Micro solo el enfocado, y los demás a `FOCUS_OTHERS_DB` y `min(corte propio, FOCUS_OTHERS_LPF_HZ)`. El brillo sigue mandando sobre el corte propio (R-26).
+- El bus de cada organismo ya existía desde M6; M7 le agrega el estado de foco y el fundido. El metrónomo y el rechazo siguen en Master, fuera de la mezcla por foco.
+- Se mantiene `MACRO_DEBUG_SCALE` de la escena de desarrollo: a `MACRO_ORG_SCALE = 0.3` y 1280x720 los nodos quedan en ~1,4 px y V-02 no se lee. La calibración final depende de la resolución del arcumai (M9).
+- M7 no tiene criterio `[SCRIPT]`; la cámara y la mezcla se verificaron con un script temporal (borrado) y quedan para V-03/V-09. Si se quiere cubrir R-36 por script, propongo `T-21`.
+
 ## 10. Fuera de alcance v1
 
 - Ciclo elástico (el ciclo dura lo que dicta la geometría).
