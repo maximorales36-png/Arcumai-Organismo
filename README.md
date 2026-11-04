@@ -38,8 +38,8 @@ godot --headless --path . --script res://tests/run_tests.gd
 ```
 
 El runner descubre y corre todos los `tests/test_*.gd` y sale con código 0 solo
-si todos los tests pasan. La primera corrida importa el proyecto (genera
-`.godot/`), porque sin eso los `class_name` no existen.
+si todos los tests pasan. Antes de correrlos importa el proyecto (incremental,
+~1 s): sin eso, un `class_name` recién creado no existe y los tests no compilan.
 
 ## Export
 

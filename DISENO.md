@@ -137,6 +137,12 @@ Con B2 mantenido (sembrando), presionar B4 cancela la siembra.
 - Input mapeado por `physical_keycode`: funciona igual con cualquier distribución de teclado.
 - Contrato de tests: cada `tests/test_*.gd` extiende `RefCounted` y expone `run() -> Array[Dictionary]`; `run_tests.gd` los descubre solo.
 
+**2026-11-04 (M1)**
+- Hardware del arcumai: Intel i3, 8 GB de RAM y GPU NVIDIA vieja (modelo a confirmar). Confirma `gl_compatibility`; el juego no debe depender de una GPU moderna.
+- El click del metrónomo de M1 se genera en memoria (`src/audio/click_stream.gd`), sin archivos binarios. Las muestras definitivas llegan en M3 (R-25).
+- Beat en base 1: el tick 1 abre el primer beat; el tick 0 es el instante cero y no suena.
+- El wrapper de tests importa el proyecto en cada corrida: sin eso un `class_name` nuevo no se registra y los tests no compilan.
+
 ## 10. Fuera de alcance v1
 
 - Ciclo elástico (el ciclo dura lo que dicta la geometría).
