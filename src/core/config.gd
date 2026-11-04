@@ -19,6 +19,17 @@ const MIN_EDGE_TICKS := 1
 const MIN_NODE_DIST := 18.0
 const PITCH_SPAN_DEGREES := 8
 
+# Geometría orgánica (R-20, R-12). La especificación exige que sea irregular,
+# pero no fija magnitudes: estos valores son propuestos y ajustables a ojo.
+const NODE_RING_RATIO := 0.6
+const NODE_ANGLE_JITTER_MIN := 0.052
+const NODE_ANGLE_JITTER_MAX := 0.209
+const NODE_RADIAL_JITTER := 0.08
+const EDGE_CURVATURE_MIN := 0.10
+const EDGE_CURVATURE_MAX := 0.25
+const EDGE_CURVATURE_N2_MIN := 0.25
+const EDGE_CURVATURE_N2_MAX := 0.35
+
 # --- Mundo ---
 const MAX_ORGANISMS := 5
 const MAX_BRIDGES := 6

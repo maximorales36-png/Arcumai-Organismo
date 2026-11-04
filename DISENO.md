@@ -138,10 +138,17 @@ Con B2 mantenido (sembrando), presionar B4 cancela la siembra.
 - Contrato de tests: cada `tests/test_*.gd` extiende `RefCounted` y expone `run() -> Array[Dictionary]`; `run_tests.gd` los descubre solo.
 
 **2026-11-04 (M1)**
-- Hardware del arcumai: Intel i3, 8 GB de RAM y GPU NVIDIA vieja (modelo a confirmar). Confirma `gl_compatibility`; el juego no debe depender de una GPU moderna.
+- Hardware del arcumai: Intel i3, 8 GB de RAM y GPU **AMD Radeon HD 7770 GHz** (2012). No tiene Vulkan confiable en Linux, así que `gl_compatibility` no es una preferencia sino una necesidad; el juego no debe depender de una GPU moderna.
 - El click del metrónomo de M1 se genera en memoria (`src/audio/click_stream.gd`), sin archivos binarios. Las muestras definitivas llegan en M3 (R-25).
 - Beat en base 1: el tick 1 abre el primer beat; el tick 0 es el instante cero y no suena.
 - El wrapper de tests importa el proyecto en cada corrida: sin eso un `class_name` nuevo no se registra y los tests no compilan.
+
+**2026-11-04 (M2)**
+- R-20 y R-12 no fijan magnitudes de geometría (jitter angular/radial, curvatura). Quedaron como constantes ajustables en `Config`: jitter angular 3°–12°, radial 8 % de `R_MAX`, curvatura 0,10–0,25 de la cuerda (n=2: 0,25–0,35). Confirmar a ojo en M4.
+- Los signos del jitter angular alternan por índice: garantiza "nunca polígono regular" en vez de depender de que dos jitters al azar no se cancelen (en n=2 eso pasaba seguido).
+- Las hifas se modelan como Bézier cúbica con los dos manejadores corridos al mismo lado; el largo sale de `Curve2D.get_baked_length()` (R-13).
+- `distribute_ticks` es una función pura estática: el reparto de R-14 se testea sin geometría real.
+- Los tests de geometría usan tolerancia de 1e-3: `Vector2` es float de 32 bits y normalizar deja ~2e-5 de error, que no es violar la regla.
 
 ## 10. Fuera de alcance v1
 
