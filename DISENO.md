@@ -178,6 +178,20 @@ Con B2 mantenido (sembrando), presionar B4 cancela la siembra.
 - El rechazo usa el mismo pool de voces que las notas, a -18 dB, y el temblor de 150 ms se dibuja en la vista sobre el nodo seleccionado. Ningún botón queda sin respuesta.
 - La selección se dibuja como un anillo alrededor del nodo; el temblor es cosmético y no toca la geometría del modelo.
 
+**2026-11-04 (M6)**
+- El mundo Macro vive en `World` (`RefCounted`): lista de `OrganismState`, selección por vecindad, siembra, disolución y deriva. La escena solo traduce gestos y dibuja; las reglas quedan testables headless.
+- `OrganismModel` guarda una semilla propia de geometría y `rebuild(n, tick)` regenera la forma con esa semilla, recalcula `C`, `t` y `S`, mueve el ancla al próximo múltiplo de `TICKS_PER_BEAT` y reinicia los disparos (R-33). Así cambiar N y volver no deja un organismo distinto.
+- Las familias se asignan por turno (R-25), no al azar: con tres organismos siempre hay una de cada una y la polimetría se puede juzgar.
+- La posición de siembra sale de 20 candidatas al azar; se elige la que maximiza la distancia mínima a los organismos existentes (R-33). Si el mundo está lleno, B2 rechaza (R-31) y no se crea nada.
+- La deriva (R-38) es cosmética: velocidad y rumbo se resortean cada 2–5 s con el RNG inyectado y solo se mueve la posición de mundo; no toca modelo, tiempos ni audio. El delta solo anima.
+- Macro y Micro son estados de la escena, con corte directo (la cámara animada es M7). B1 entra a Micro y B4 vuelve; al cambiar de vista se cortan los gestos a medias (`reset_gestures`).
+- B4 en Macro mantiene la disolución: a 1 s se elimina el organismo; soltar antes lo recupera. El desvanecimiento es visual (`modulate.a`), no cambia el modelo.
+- `VoicePool` enruta cada voz al bus de su organismo y `stop_bus` corta sus voces antes de `OrganismBus.dispose()`, para no dejar canales ni notas colgando al disolver.
+- La vista Macro usa `MACRO_ORG_SCALE` de la especificación multiplicada por una constante cosmética de depuración (`MACRO_DEBUG_SCALE = 2.5`): a escala 0.3 los nodos medirían 1–2 px. La cámara de M7 reemplaza ese multiplicador.
+- La escena de depuración arranca en Macro con tres organismos (N = 3, 4, 5) para juzgar V-02 y la polimetría. El estado inicial definitivo (uno solo en Micro) es M9.
+- B3 en Macro (puentes) todavía produce rechazo: los puentes son M8.
+- Al salir con notas sonando, Godot puede reportar `AudioStreamWAV`/`AudioStreamPlaybackWAV` filtrados: es el bug conocido del `AudioServer`, que retiene el playback hasta el próximo mix y al cerrar no lo hay. No es un ciclo del proyecto y no afecta al runner.
+
 ## 10. Fuera de alcance v1
 
 - Ciclo elástico (el ciclo dura lo que dicta la geometría).

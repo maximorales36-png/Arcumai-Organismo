@@ -1,19 +1,16 @@
-# Vista Micro de depuración (M4): dibuja el organismo como micelio y el pulso
-# como una cabeza luminosa con cola. Además: bulbos que respiran, motas de
-# flujo, anticipación y flash al disparar, y el nodo origen destacado.
+# Vista de un organismo: dibuja el micelio y el pulso como una cabeza luminosa
+# con cola. Además: bulbos que respiran, motas de flujo, anticipación y flash al
+# disparar, nodo origen destacado, anillo de selección y aura de Macro.
 # Recibe el modelo con setup(), la fase continua con update_visuals() y los
-# disparos con flash(). Todo lo visual es cosmético: la posición del pulso la
-# decide OrganismModel.pulse_at (R-21) y el suavizado no toca el núcleo.
+# disparos con flash(). La escala y la posición las decide la escena, porque
+# cambian entre Macro y Micro. Todo lo visual es cosmético: la posición del
+# pulso la decide OrganismModel.pulse_at (R-21) y el suavizado no toca el núcleo.
 
 class_name OrganismView
 extends Node2D
 
 # El suavizado de R-21 es visual: constante de tiempo de 80 ms.
 const SMOOTH_TIME := 0.08
-
-# Escala de la vista de depuración: el zoom con cámara llega en M7, pero a
-# escala 1:1 el organismo mide ~130 px y el pulso no se lee. Es solo visual.
-const VIEW_SCALE := 3.0
 
 const NODE_RADIUS := 9.0
 const ORIGIN_RADIUS := 12.0
@@ -42,14 +39,23 @@ const FLOW_DOTS := 3
 const FLOW_DOT_RADIUS := 1.6
 const FLOW_ALPHA := 0.35
 
-# Anillo de selección: el nodo que el joystick está apuntando.
+# Anillo de selección: el nodo que el joystick está apuntando (Micro).
 const SELECTION_GAP := 6.0
 const SELECTION_WIDTH := 1.5
 
-# Temblor de rechazo (R-31): 150 ms sobre el nodo seleccionado.
+# Aura de Macro: el organismo seleccionado (DISENO 5.3).
+const AURA_GAP := 14.0
+const AURA_ALPHA := 0.10
+const AURA_RING_ALPHA := 0.55
+const AURA_RING_WIDTH := 3.0
+
+# Temblor de rechazo (R-31): 150 ms sobre el nodo o el organismo seleccionado.
 const SHAKE_TIME := 0.15
 const SHAKE_HZ := 12.0
 const SHAKE_AMPLITUDE := 4.0
+
+# Recuperación visual al soltar B4 antes de disolver (R-34).
+const FADE_TIME := 0.12
 
 var _model: OrganismModel
 var _base_hue := 0.38
@@ -59,8 +65,11 @@ var _head := Vector2.ZERO
 var _has_head := false
 var _trail: Array[Vector2] = []
 var _flash: Array[float] = []
-var _selected := 0
+var _selected := -1
+var _macro_selected := false
+var _fade_target := 1.0
 var _shake_node := -1
+var _shake_whole := false
 var _shake_left := 0.0
 
 
@@ -68,18 +77,35 @@ func setup(model: OrganismModel, family: int = 0) -> void:
 	_model = model
 	# Cada familia tiene su matiz (DISENO 5.1): las 3 quedan separadas 0,24.
 	_base_hue = fposmod(0.38 + 0.24 * float(family), 1.0)
-	scale = Vector2(VIEW_SCALE, VIEW_SCALE)
 	_flash.resize(model.n)
 	_flash.fill(0.0)
 	_trail.clear()
 	_has_head = false
-	_selected = 0
+	_selected = -1
+	_macro_selected = false
+	_shake_node = -1
+	_shake_whole = false
+	_shake_left = 0.0
+	_fade_target = 1.0
+	modulate.a = 1.0
 	queue_redraw()
 
 
+# Anillo del nodo seleccionado en Micro; -1 lo apaga.
 func set_selection(node_index: int) -> void:
 	_selected = node_index
 	queue_redraw()
+
+
+# Aura del organismo seleccionado en Macro (DISENO 5.3).
+func set_macro_selected(value: bool) -> void:
+	_macro_selected = value
+	queue_redraw()
+
+
+# Opacidad objetivo: 1 normal, menos mientras se mantiene B4 (R-34).
+func set_fade_target(value: float) -> void:
+	_fade_target = clampf(value, 0.0, 1.0)
 
 
 func flash(node_index: int) -> void:
@@ -90,21 +116,30 @@ func flash(node_index: int) -> void:
 		_flash[index] = 1.0
 
 
+# Temblor de un nodo (Micro).
 func shake(node_index: int) -> void:
 	if _model == null:
 		return
 	_shake_node = posmod(node_index, _model.n)
+	_shake_whole = false
+	_shake_left = SHAKE_TIME
+
+
+# Temblor de todo el organismo (Macro): el elemento seleccionado es el organismo.
+func shake_organism() -> void:
+	_shake_whole = true
 	_shake_left = SHAKE_TIME
 
 
 # Avanza la animación visual. `phi_f` es la fase continua que calcula la escena
-# (R-21); `delta` solo mueve el suavizado, el brillo y las motas.
+# (R-21); `delta` solo mueve el suavizado, la opacidad y las motas.
 func update_visuals(phi_f: float, delta: float) -> void:
 	if _model == null:
 		return
 	_time += delta
 	_phase = phi_f
 	_shake_left = maxf(0.0, _shake_left - delta)
+	modulate.a = lerpf(modulate.a, _fade_target, 1.0 - exp(-delta / FADE_TIME))
 	_update_head(phi_f, delta)
 	for i in _flash.size():
 		_flash[i] = maxf(0.0, _flash[i] - delta * FLASH_DECAY)
@@ -114,10 +149,22 @@ func update_visuals(phi_f: float, delta: float) -> void:
 func _draw() -> void:
 	if _model == null:
 		return
+	var whole := _whole_shake_offset()
+	if whole != Vector2.ZERO:
+		draw_set_transform(whole, 0.0, Vector2.ONE)
+	if _macro_selected:
+		_draw_aura()
 	_draw_edges()
 	_draw_flow()
 	_draw_nodes()
 	_draw_pulse()
+
+
+func _draw_aura() -> void:
+	var radius := Config.r_max(_model.n) + AURA_GAP
+	var color := _pulse_color()
+	draw_circle(Vector2.ZERO, radius, Color(color, AURA_ALPHA))
+	draw_arc(Vector2.ZERO, radius, 0.0, TAU, 64, Color(color, AURA_RING_ALPHA), AURA_RING_WIDTH, true)
 
 
 func _update_head(phi_f: float, delta: float) -> void:
@@ -201,7 +248,16 @@ func _draw_pulse() -> void:
 
 # Temblor de rechazo (R-31): oscilación horizontal corta que se apaga.
 func _shake_offset(node_index: int) -> Vector2:
-	if node_index != _shake_node or _shake_left <= 0.0:
+	if _shake_whole or node_index != _shake_node or _shake_left <= 0.0:
+		return Vector2.ZERO
+	var strength := _shake_left / SHAKE_TIME
+	return Vector2(sin(_time * TAU * SHAKE_HZ) * SHAKE_AMPLITUDE * strength, 0.0)
+
+
+# Temblor de todo el dibujo: se aplica como transformación de dibujo para no
+# mover la posición del nodo (la escena la usa para el layout de Macro).
+func _whole_shake_offset() -> Vector2:
+	if not _shake_whole or _shake_left <= 0.0:
 		return Vector2.ZERO
 	var strength := _shake_left / SHAKE_TIME
 	return Vector2(sin(_time * TAU * SHAKE_HZ) * SHAKE_AMPLITUDE * strength, 0.0)

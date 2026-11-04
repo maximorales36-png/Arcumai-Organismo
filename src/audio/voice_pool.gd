@@ -1,7 +1,8 @@
 # Pool de reproductores de audio (R-29). Crea VOICE_CAP AudioStreamPlayer y
 # delega la elección de voz en VoiceAllocator; al terminar un sonido, la voz
 # vuelve a quedar libre.
-# Recibe stream, pitch_scale y volumen; no decide alturas ni mezcla.
+# Recibe stream, pitch_scale, volumen y el bus del organismo que suena; no
+# decide alturas ni mezcla.
 
 class_name VoicePool
 extends Node
@@ -20,11 +21,14 @@ func _ready() -> void:
 		_players.append(player)
 
 
-func play(stream: AudioStream, pitch_scale: float, volume_db: float = 0.0) -> void:
+func play(stream: AudioStream, pitch_scale: float, volume_db: float = 0.0, bus_name: String = "Master") -> void:
 	if stream == null or _allocator == null:
 		return
 	var index := _allocator.acquire()
 	var player := _players[index]
+	# El bus es del organismo (R-26): cada voz se enruta al suyo en el momento
+	# de sonar, porque el pool es compartido por todo el mundo.
+	player.bus = bus_name
 	player.stream = stream
 	player.pitch_scale = pitch_scale
 	player.volume_db = volume_db
@@ -35,10 +39,15 @@ func active_voices() -> int:
 	return 0 if _allocator == null else _allocator.active_count()
 
 
-# Enruta todas las voces al bus del organismo (R-26: brillo por bus).
-func set_bus(bus_name: String) -> void:
-	for player in _players:
-		player.bus = bus_name
+# Corta las voces de un organismo antes de quitar su bus y libera sus lugares
+# en el pool: un stop manual no emite `finished`.
+func stop_bus(bus_name: String) -> void:
+	if _allocator == null:
+		return
+	for i in _players.size():
+		if _players[i].bus == bus_name and _players[i].playing:
+			_players[i].stop()
+			_allocator.release(i)
 
 
 # Al desmontar el pool se cortan las voces y se sueltan los streams: si no, un

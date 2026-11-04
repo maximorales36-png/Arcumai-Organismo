@@ -29,6 +29,9 @@ var _curvatures: Array[float] = []
 var _curves: Array[Curve2D] = []
 var _fired: Array[bool] = []
 var _rng: RandomNumberGenerator
+# Semilla propia del organismo: permite regenerar la misma geometría cuando
+# cambia n durante la siembra (R-33), sin depender del estado del RNG global.
+var _geometry_seed: int
 
 
 # El ancla es el primer múltiplo de TICKS_PER_BEAT estrictamente posterior al
@@ -36,10 +39,23 @@ var _rng: RandomNumberGenerator
 func _init(organism_id: int, node_count: int, current_tick: int, rng: RandomNumberGenerator) -> void:
 	id = organism_id
 	n = clampi(node_count, Config.N_MIN, Config.N_MAX)
-	_rng = rng
 	anchor_tick = (current_tick / Config.TICKS_PER_BEAT + 1) * Config.TICKS_PER_BEAT
 	cycle_ticks = n * Config.TICKS_PER_BEAT
-	_build_geometry()
+	_geometry_seed = rng.randi()
+	_rebuild_geometry()
+	_recompute_ticks()
+	_recompute_starts()
+
+
+# R-33: cambia n en vivo durante la siembra. Regenera la geometría con la
+# misma semilla del organismo, recalcula C, t y S, mueve el ancla al próximo
+# múltiplo de TICKS_PER_BEAT (R-17) y reinicia los disparos del ciclo.
+func rebuild(node_count: int, current_tick: int) -> void:
+	n = clampi(node_count, Config.N_MIN, Config.N_MAX)
+	anchor_tick = (current_tick / Config.TICKS_PER_BEAT + 1) * Config.TICKS_PER_BEAT
+	cycle_ticks = n * Config.TICKS_PER_BEAT
+	origin = 0
+	_rebuild_geometry()
 	_recompute_ticks()
 	_recompute_starts()
 
@@ -197,6 +213,14 @@ func pulse_at(phi_f: float) -> Dictionary:
 # Curva de la hifa i, para que la vista la dibuje sin recalcular nada (R-13).
 func edge_curve(i: int) -> Curve2D:
 	return _curves[posmod(i, n)]
+
+
+# La geometría se genera siempre desde la semilla propia: así el mismo n da
+# la misma forma y cambiar n y volver no deja un organismo distinto (R-33).
+func _rebuild_geometry() -> void:
+	_rng = RandomNumberGenerator.new()
+	_rng.seed = _geometry_seed
+	_build_geometry()
 
 
 func _build_geometry() -> void:

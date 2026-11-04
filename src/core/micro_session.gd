@@ -42,6 +42,23 @@ func is_dragging() -> bool:
 	return _dragging
 
 
+# R-33: al cambiar n durante la siembra el modelo se regenera; la sesión
+# ajusta su lista de variantes y mantiene la selección dentro de rango.
+func on_model_rebuilt() -> void:
+	_variants.resize(_model.n)
+	if selected >= _model.n:
+		selected = 0
+		selection_changed.emit(selected)
+
+
+# Al entrar o salir de Micro se cortan los gestos a medias: si B1 o B3
+# quedaron apretados, no deben seguir actuando al volver a la vista.
+func reset_gestures() -> void:
+	_dragging = false
+	_moved_during_press = false
+	_adjusting_brightness = false
+
+
 # R-30: un empuje mueve la selección al nodo vecino en esa dirección. Con B1 o
 # B3 apretados el joystick tiene otro verbo, así que no navega.
 func nav_step(direction: Vector2) -> void:
@@ -83,11 +100,6 @@ func b3_pressed() -> void:
 
 func b3_released() -> void:
 	_adjusting_brightness = false
-
-
-# B4 vuelve a Macro, que todavía no existe: por ahora es rechazo (R-31).
-func b4_pressed() -> void:
-	rejected.emit()
 
 
 # Una vez por frame: aplica arrastre (R-22) o brillo (R-35) según el gesto.

@@ -20,10 +20,23 @@ la terminal:
 godot --path .
 ```
 
-La escena `src/view/main.tscn` es la de depuración: muestra el organismo como
-micelio (nodos, hifas curvas, pulso con cabeza y cola), el overlay con tick,
-beat, escala, nodo seleccionado, variante, brillo, última acción, última nota y
-FPS, y hace sonar un nodo cada vez que el pulso lo dispara.
+La escena `src/view/main.tscn` es la de depuración: arranca en Macro con tres
+organismos de distinto N (3, 4 y 5) que pulsan a la vez. B1 entra a la vista
+Micro del organismo seleccionado y B4 vuelve a Macro. El overlay muestra tick,
+beat, escala, modo, organismos, selección, variante, brillo, última acción,
+última nota y FPS.
+
+### Controles (vista Macro)
+
+| Acción | Teclado | Efecto |
+|---|---|---|
+| Joystick | W / A / S / D | Selecciona el organismo vecino en esa dirección (mantener repite) |
+| B1 tap | H | Entra a Micro con el organismo seleccionado |
+| B2 mantener | J | Siembra un organismo; izquierda/derecha cambia su N en vivo |
+| B2 soltar | J | Confirma la siembra |
+| B4 durante la siembra | L | Cancela y elimina el organismo sembrado |
+| B4 mantener 1 s | L | Disuelve el organismo seleccionado (soltar antes lo recupera) |
+| B3 | K | Puentes: todavía no (M8), produce rechazo |
 
 ### Controles (vista Micro)
 
@@ -34,7 +47,7 @@ FPS, y hace sonar un nodo cada vez que el pulso lo dispara.
 | B1 tap | H | El nodo seleccionado pasa a ser el origen |
 | B2 tap | J | Cambia la variante de sonido del nodo seleccionado |
 | B3 mantener + arriba/abajo | K + W/S | Brillo del organismo (arriba = más brillante) |
-| B4 | L | Todavía no hay Macro: produce rechazo |
+| B4 | L | Vuelve a Macro |
 
 En el arcumai, el joystick y los botones llegan como un dispositivo USB; el
 mapeo de ejes y botones se ajusta cuando se pruebe en el hardware.
