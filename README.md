@@ -20,8 +20,22 @@ la terminal:
 godot --path .
 ```
 
-En M0 la escena `src/view/main.tscn` solo muestra un fondo oscuro, la última
-acción de input recibida y los FPS.
+La escena `src/view/main.tscn` es la de depuración: muestra el organismo como
+puntos, el overlay con tick, beat, escala, última acción, última nota y FPS, y
+hace sonar un nodo cada vez que el pulso lo dispara.
+
+## Placeholders de audio
+
+Las muestras definitivas todavía no existen (R-25). Los placeholders de las 3
+familias × 3 variantes se generan por script y se versionan en
+`audio/placeholder/`:
+
+```powershell
+godot --headless --path . --script res://tools/generate_placeholders.gd
+```
+
+El script es de desarrollo: no se usa en tiempo de ejecución. Cuando Maxi aporte
+las muestras reales, van en `audio/<familia>/<variante>.wav`.
 
 ## Correr los tests
 

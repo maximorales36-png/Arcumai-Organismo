@@ -150,6 +150,13 @@ Con B2 mantenido (sembrando), presionar B4 cancela la siembra.
 - `distribute_ticks` es una función pura estática: el reparto de R-14 se testea sin geometría real.
 - Los tests de geometría usan tolerancia de 1e-3: `Vector2` es float de 32 bits y normalizar deja ~2e-5 de error, que no es violar la regla.
 
+**2026-11-04 (M3)**
+- Escala y tónica se sortean una vez por sesión con el RNG de la sesión (R-24) y viajan a `PitchMapping` como parámetros: el mapeo no guarda estado ni conoce escenas.
+- `PitchMapping` reproduce la fórmula de R-23 tal cual. Con la tónica sumada sobre `BASE_MIDI(n)`, el extremo superior (n=2, tónica 11, grado 7) llega a midi 93; el extremo inferior (n=8, tónica 0, grado 0) a midi 36. El registro por N se evalúa a oído en V-06.
+- `VoiceAllocator` (política pura, testeable headless) está separado de `VoicePool` (Node con los `AudioStreamPlayer`). T-14 testea la política, que es donde vive la regla de R-29.
+- Los placeholders de R-25 se generan con `tools/generate_placeholders.gd` y se versionan en `audio/placeholder/` con el nombre `family_<familia>_<variante>.wav`. Las muestras reales irán en `audio/<familia>/<variante>.wav`.
+- La escena de depuración usa una semilla fija (`DEV_SEED`) para que la geometría, la escala y la tónica sean las mismas en cada arranque. La vista dibuja puntos y hifas sin animación: el pulso y el flash son de M4.
+
 ## 10. Fuera de alcance v1
 
 - Ciclo elástico (el ciclo dura lo que dicta la geometría).
