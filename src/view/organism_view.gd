@@ -76,7 +76,7 @@ var _shake_left := 0.0
 func setup(model: OrganismModel, family: int = 0) -> void:
 	_model = model
 	# Cada familia tiene su matiz (DISENO 5.1): las 3 quedan separadas 0,24.
-	_base_hue = fposmod(0.38 + 0.24 * float(family), 1.0)
+	_base_hue = family_hue(family)
 	_flash.resize(model.n)
 	_flash.fill(0.0)
 	_trail.clear()
@@ -288,6 +288,16 @@ func _node_color() -> Color:
 
 func _pulse_color() -> Color:
 	return Color.from_hsv(fposmod(_base_hue + 0.08, 1.0), 0.25, 1.0)
+
+
+# Matiz de la familia (DISENO 5.1): las 3 quedan separadas 0,24. La comparten
+# la vista del organismo y la de los puentes para que el color sea el mismo.
+static func family_hue(family: int) -> float:
+	return fposmod(0.38 + 0.24 * float(family), 1.0)
+
+
+static func family_pulse_color(family: int) -> Color:
+	return Color.from_hsv(fposmod(family_hue(family) + 0.08, 1.0), 0.25, 1.0)
 
 
 # La cola usa el matiz saturado: a baja opacidad el color pálido se ve gris.

@@ -24,8 +24,19 @@ La escena `src/view/main.tscn` es la de depuración: arranca en Macro con tres
 organismos de distinto N (3, 4 y 5) que pulsan a la vez. B1 entra a la vista
 Micro del organismo seleccionado y B4 vuelve a Macro; la cámara hace un zoom de
 0,5 s y la mezcla por foco acompaña (en Micro el enfocado suena completo y los
-demás quedan atrás). El overlay muestra tick, beat, escala, modo, organismos,
-selección, variante, brillo, última acción, última nota y FPS.
+demás quedan atrás). El overlay muestra tick, beat, escala, modo, organismos, puentes, selección,
+variante, brillo, última acción, última nota y FPS.
+
+### Puentes
+
+Con B3 mantenido, cada cambio de dirección del joystick crea el puente hacia el
+vecino en esa dirección o lo quita si ya existe. El joystick no mueve la
+selección mientras B3 está apretado. Un puente va de un nodo emisor de A a un
+nodo receptor de B; cuando el emisor suena, el receptor suena como eco
+`BRIDGE_DELAY_TICKS` después, y el eco se ve viajar por el filamento. Máximo
+`MAX_BRIDGES` puentes en total y uno por par ordenado. Disolver un organismo
+elimina sus puentes y sus ecos pendientes. No hay contagio: un eco no dispara
+otros ecos.
 
 ### Controles (vista Macro)
 
@@ -37,7 +48,7 @@ selección, variante, brillo, última acción, última nota y FPS.
 | B2 soltar | J | Confirma la siembra |
 | B4 durante la siembra | L | Cancela y elimina el organismo sembrado |
 | B4 mantener 1 s | L | Disuelve el organismo seleccionado (soltar antes lo recupera) |
-| B3 | K | Puentes: todavía no (M8), produce rechazo |
+| B3 mantener + joystick | K + WASD | Crea o quita un puente desde el organismo seleccionado hacia el vecino en esa dirección |
 
 ### Controles (vista Micro)
 

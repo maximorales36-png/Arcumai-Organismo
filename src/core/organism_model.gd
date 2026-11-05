@@ -143,6 +143,12 @@ func on_tick(tick: int) -> void:
 			node_fired.emit(id, node_index, tick, false)
 
 
+# R-27: un eco no nace del ciclo del organismo: no toca `fired`, el origen ni
+# el ancla. Solo emite el disparo para que la escena lo trate como sonido.
+func emit_echo(node_index: int, tick: int) -> void:
+	node_fired.emit(id, node_index, tick, true)
+
+
 # Cambia el nodo origen (R-19): solo se reordena S, no los ticks por hifa,
 # y se conservan los disparos ya hechos en el ciclo.
 func set_origin(node_index: int) -> void:

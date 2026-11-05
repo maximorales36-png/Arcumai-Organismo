@@ -208,6 +208,16 @@ Con B2 mantenido (sembrando), presionar B4 cancela la siembra.
 - La regla anterior era literal a R-30, así que el cambio es de especificación: R-30 pasa a "el candidato más cercano dentro del cono de 60°; en empate, el de menor ángulo". Queda pendiente que Maxi actualice `ESPECIFICACION.md`.
 - T-16 se reescribió para la regla nueva e incluye una disposición real de 5 organismos donde todos deben ser alcanzables desde todos.
 
+**2026-11-05 (M8)**
+- `Bridge` es solo el dato del puente (ids de origen/destino e índices de nodo emisor/receptor) y `BridgeNetwork` guarda la lista y la cola FIFO de ecos. Ambos son `RefCounted` y viven en `World`, así T-11/T-12 corren headless.
+- Los nodos del puente se fijan al crearlo: el emisor es el nodo de A más cercano al centro de B y el receptor el de B más cercano al centro de A (coordenadas de mundo, menor índice en empate). La vista recalcula la posición de esos índices cada frame, así la deriva y el arrastre mueven el filamento sin tocar el núcleo.
+- El eco se encola al disparar el nodo emisor y vence a `T + BRIDGE_DELAY_TICKS`. Se entrega en `World.flush_echoes` después de que todos los organismos evaluaron sus disparos (R-04) y se descarta si A o B ya no existen. Un eco no encola otros ecos: sin contagio.
+- Quitar un puente con B3 cancela sus ecos pendientes; disolver un organismo elimina sus puentes y ecos recién cuando se elimina de verdad, no al empezar el desvanecimiento. Ambas cosas fueron consultadas a Maxi.
+- El gesto de B3 usa el **cambio de dirección** del joystick (sin auto-repetición) mientras B3 está apretado, y el joystick no navega en ese lapso. Si B3 se aprieta con el joystick ya inclinado, espera al próximo cambio de dirección.
+- El eco se dibuja como un punto que recorre la misma curva que el filamento durante los dos ticks de retardo, usando `Clock.tick` + `Clock.fraction()`: la vista no lleva un tiempo propio. El color sale de la familia del organismo de origen.
+- `OrganismModel.emit_echo` emite `node_fired(..., is_echo = true)` sin tocar `fired`, el origen ni el ancla: un eco suena pero no altera el ciclo del receptor.
+- La escena de depuración muestra la cantidad de puentes en el overlay.
+
 ## 10. Fuera de alcance v1
 
 - Ciclo elástico (el ciclo dura lo que dicta la geometría).

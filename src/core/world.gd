@@ -21,6 +21,8 @@ const SPAWN_CANDIDATES := 20
 
 var organisms: Array[OrganismState] = []
 var selected: int = 0
+# R-27/R-28: puentes dirigidos y su cola de ecos. La vista los lee para dibujar.
+var bridges := BridgeNetwork.new()
 
 var _rng: RandomNumberGenerator
 var _next_id := 1
@@ -31,6 +33,7 @@ var _spawn_index := -1
 var _spawn_previous_id := -1
 var _dissolving := false
 var _dissolve_elapsed := 0.0
+var _connecting := false
 
 
 func _init(rng: RandomNumberGenerator) -> void:
@@ -73,6 +76,10 @@ func is_spawning() -> bool:
 
 func is_dissolving() -> bool:
 	return _dissolving
+
+
+func is_connecting() -> bool:
+	return _connecting
 
 
 # Progreso del desvanecimiento de R-34, de 0 a 1 durante DISSOLVE_HOLD_MS.
@@ -119,6 +126,8 @@ func nav_step(direction: Vector2) -> void:
 			_change_spawn_n(step)
 		return
 	if _dissolving:
+		return
+	if _connecting:
 		return
 
 	var next := Selection.pick(organisms[selected].position, direction, _positions())
@@ -169,9 +178,60 @@ func b4_released() -> void:
 		_dissolve_elapsed = 0.0
 
 
-# B3 en Macro crea puentes, que son M8: por ahora es una acción imposible.
+# R-28: B3 en Macro arma el gesto de puente; la dirección llega como cambio de
+# joystick. Durante una siembra o disolución no hay puente posible.
 func b3_pressed() -> void:
-	rejected.emit()
+	if _spawning or _dissolving:
+		rejected.emit()
+		return
+	_connecting = true
+
+
+func b3_released() -> void:
+	_connecting = false
+
+
+# Al cambiar de vista se cortan los gestos a medias: si B3 quedó apretado, no
+# debe seguir armado al volver a Macro (B3 en Micro es otra función).
+func reset_gestures() -> void:
+	_connecting = false
+
+
+# R-28: B3 mantenido + dirección. El vecino se elige con la misma regla que
+# R-30; si el puente ya existe se quita, y si no hay lugar se rechaza.
+func connect_toward(direction: Vector2) -> void:
+	var source := selected_organism()
+	if source == null:
+		return
+	var target_index := Selection.pick(source.position, direction, _positions())
+	if target_index < 0:
+		rejected.emit()
+		return
+	var target := organisms[target_index]
+	if bridges.remove(source.id, target.id):
+		return
+	if not bridges.can_add(source.id, target.id):
+		rejected.emit()
+		return
+	bridges.add(make_bridge(source, target))
+
+
+# R-27: la escena le pasa cada disparo. El disparo de un nodo emisor encola el
+# eco del puente; los ecos no vuelven a encolar (sin contagio).
+func on_node_fired(organism_id: int, node_index: int, tick: int, is_echo: bool) -> void:
+	bridges.on_node_fired(organism_id, node_index, tick, is_echo)
+
+
+# R-04: después de que todos los organismos evaluaron sus disparos, vencen los
+# ecos. Se entregan en orden de la cola y se descartan si A o B ya no existe.
+func flush_echoes(tick: int) -> void:
+	var alive := {}
+	for organism in organisms:
+		alive[organism.id] = true
+	for echo in bridges.take_due(tick, alive):
+		var target := find_by_id(echo.to_id)
+		if target != null:
+			target.model.emit_echo(echo.to_node, tick)
 
 
 # Deriva cosmética (R-38) y reloj de la disolución. El delta solo anima: no
@@ -202,6 +262,30 @@ static func pick_position(existing: Array[Vector2], rng: RandomNumberGenerator) 
 	return best
 
 
+# R-28: el nodo emisor es el de A más cercano al centro de B y el receptor el
+# de B más cercano al centro de A, en coordenadas de mundo. Se guardan como
+# índices fijos; la vista sigue la posición de esos nodos.
+static func make_bridge(source: OrganismState, target: OrganismState) -> Bridge:
+	return Bridge.new(
+		source.id,
+		closest_node_to(source, target.position),
+		target.id,
+		closest_node_to(target, source.position)
+	)
+
+
+static func closest_node_to(organism: OrganismState, point: Vector2) -> int:
+	var best := 0
+	var best_distance := INF
+	for i in organism.model.n:
+		var world_position := organism.position + organism.model.nodes[i]
+		var distance := world_position.distance_squared_to(point)
+		if distance < best_distance:
+			best_distance = distance
+			best = i
+	return best
+
+
 static func random_world_point(rng: RandomNumberGenerator) -> Vector2:
 	var margin := Config.r_max(Config.N_MAX) * Config.MACRO_ORG_SCALE
 	return Vector2(
@@ -223,6 +307,7 @@ func _change_spawn_n(step: int) -> void:
 func _cancel_spawn() -> void:
 	var organism := organisms[_spawn_index]
 	organisms.remove_at(_spawn_index)
+	bridges.remove_for(organism.id)
 	_spawning = false
 	_spawn_index = -1
 	var previous := index_of_id(_spawn_previous_id)
@@ -235,6 +320,7 @@ func _cancel_spawn() -> void:
 func _remove_selected() -> void:
 	var organism := organisms[selected]
 	organisms.remove_at(selected)
+	bridges.remove_for(organism.id)
 	_dissolving = false
 	_dissolve_elapsed = 0.0
 	if selected >= organisms.size():

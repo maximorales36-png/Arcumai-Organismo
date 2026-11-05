@@ -58,6 +58,7 @@ var _tonic: int = 0
 var _stick := Vector2.ZERO
 var _views: Dictionary = {}
 var _buses: Dictionary = {}
+var _bridges_view: BridgesView
 
 
 func _ready() -> void:
@@ -81,6 +82,11 @@ func _ready() -> void:
 			_samples.append(load(SAMPLE_PATH % [family + 1, variant]))
 
 	_world = World.new(rng)
+	# Los puentes se dibujan detrás de los organismos: la vista se agrega antes
+	# que las vistas de organismo.
+	_bridges_view = BridgesView.new()
+	_bridges_view.setup(_world, _clock)
+	_world_layer.add_child(_bridges_view)
 	_world.organism_added.connect(_on_organism_added)
 	_world.organism_removed.connect(_on_organism_removed)
 	_world.organism_rebuilt.connect(_on_organism_rebuilt)
@@ -119,6 +125,7 @@ func _process(delta: float) -> void:
 		var view: OrganismView = _views.get(organism.id)
 		if view != null and view.visible:
 			view.update_visuals(_current_phase_f(organism.model), delta)
+	_bridges_view.update_visuals()
 	_fps_label.text = "FPS: %d" % Engine.get_frames_per_second()
 
 
@@ -140,11 +147,15 @@ func _on_tick_emitted(tick: int) -> void:
 	_world.set_tick(tick)
 	for organism in _world.organisms:
 		organism.model.on_tick(tick)
+	# R-04: recién después de los disparos de los organismos vencen los ecos.
+	_world.flush_echoes(tick)
 
 
 # La altura del nodo se convierte en nota al momento del disparo: si se movió
-# el nodo, la nota nueva sale sola (R-23) sin recalcular nada por tick.
-func _on_node_fired(organism_id: int, node_index: int, _tick: int, _is_echo: bool) -> void:
+# el nodo, la nota nueva sale sola (R-23) sin recalcular nada por tick. Los
+# ecos pasan por acá igual que los disparos propios: sonido y flash del nodo.
+func _on_node_fired(organism_id: int, node_index: int, tick: int, is_echo: bool) -> void:
+	_world.on_node_fired(organism_id, node_index, tick, is_echo)
 	var organism := _world.find_by_id(organism_id)
 	if organism == null:
 		return
@@ -177,6 +188,11 @@ func _on_nav_step(direction: Vector2) -> void:
 
 func _on_stick_changed(direction: Vector2) -> void:
 	_stick = direction
+	# R-28: con B3 apretado el joystick conecta, no navega. Se usa el cambio de
+	# dirección (sin auto-repetición) para que un gesto cree o quite un puente.
+	if _mode == MODE_MACRO and _world.is_connecting() and direction != Vector2.ZERO:
+		_world.connect_toward(direction)
+		_update_labels()
 
 
 func _on_button_pressed(action: String) -> void:
@@ -216,6 +232,8 @@ func _release_in_macro(action: String) -> void:
 	match action:
 		"btn_2":
 			_world.b2_released()
+		"btn_3":
+			_world.b3_released()
 		"btn_4":
 			_world.b4_released()
 
@@ -253,6 +271,7 @@ func _enter_micro() -> void:
 		return
 	_mode = MODE_MICRO
 	_zoom_target = 1.0
+	_world.reset_gestures()
 	organism.session.reset_gestures()
 	_update_focus_targets()
 	_layout_views()
@@ -265,6 +284,7 @@ func _exit_micro() -> void:
 		organism.session.reset_gestures()
 	_mode = MODE_MACRO
 	_zoom_target = 0.0
+	_world.reset_gestures()
 	_update_focus_targets()
 	_layout_views()
 	_update_labels()
@@ -471,8 +491,9 @@ func _update_labels() -> void:
 		return
 
 	if _mode == MODE_MACRO:
-		_world_label.text = "modo: macro   organismos: %d   seleccionado: %d (n=%d, familia %d)" % [
+		_world_label.text = "modo: macro   organismos: %d   puentes: %d   seleccionado: %d (n=%d, familia %d)" % [
 			_world.count(),
+			_world.bridges.count(),
 			_world.selected + 1,
 			organism.model.n,
 			organism.family + 1,
