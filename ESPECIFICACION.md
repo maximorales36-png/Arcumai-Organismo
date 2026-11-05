@@ -116,7 +116,7 @@ Clase `OrganismModel` (`RefCounted`). No conoce nodos de escena ni sonido: emite
 
 ## 6. Input y respuesta
 
-- **R-30** **Joystick digital, selección por vecindad.** Se lee como vector de 8 direcciones. Cada empuje mueve la selección al candidato cuyo ángulo respecto del joystick sea menor, con un máximo de 60°; en empate gana el más cercano. Si no hay candidato, se aplica el rechazo (R-31). Mantener el joystick repite el paso: primera repetición a `NAV_REPEAT_FIRST_MS`, siguientes cada `NAV_REPEAT_MS`. La regla vale para nodos (Micro) y organismos (Macro).
+- **R-30** **Joystick digital, selección por vecindad.** Se lee como vector de 8 direcciones. Cada empuje mueve la selección al candidato **más cercano** cuyo ángulo respecto del joystick no supere los 60°; a igual distancia gana el de menor ángulo. Si no hay candidato, se aplica el rechazo (R-31). Mantener el joystick repite el paso: primera repetición a `NAV_REPEAT_FIRST_MS`, siguientes cada `NAV_REPEAT_MS`. La regla vale para nodos (Micro) y organismos (Macro).
 - **R-31** **Rechazo.** Toda acción imposible (sin vecino, tope de organismos, tope de puentes, disolver el último organismo) produce una respuesta de rechazo: un sonido corto, grave y bajo (≈ -18 dB) y un temblor visual de 150 ms sobre el elemento seleccionado. Ningún botón puede quedar sin respuesta.
 - **R-32** **Gestos con B1 en Micro.** Se decide al soltar B1: si durante la pulsación el joystick se movió, fue arrastre (R-22) y no cambia el origen; si no se movió, es un tap y el nodo seleccionado pasa a ser origen (R-19). No hay umbral de tiempo.
 - **R-33** **Siembra (Macro, B2).** Al apretar B2 se crea un organismo con `N_DEFAULT` y ya suena (sin esperar a soltar). Joystick izquierda/derecha cambia `n` en pasos de 1 (recortado a `[N_MIN, N_MAX]`), regenerando la geometría con la misma semilla para que el cambio sea fluido; soltar B2 confirma; B4 durante la pulsación cancela y elimina el organismo. Al cambiar `n` se recalculan `C`, `t` y `S`, el ancla se recalcula como en R-17 (próximo múltiplo de `TICKS_PER_BEAT` estrictamente posterior al tick actual) y se reinician los `fired`. Posición: entre 20 candidatas al azar dentro del mundo, la que maximiza la distancia mínima a los organismos existentes. Si ya hay `MAX_ORGANISMS`, rechazo.
@@ -147,7 +147,7 @@ Se ejecutan con `godot --headless --script res://tests/run_tests.gd`. Semilla fi
 | T-13 | R-23 | Para todo `n`, escala y tónica: `midi` dentro de `[24, 96]`; las notas pertenecen a la escala; el grado es monótono no decreciente respecto de la altura del nodo |
 | T-14 | R-29 | Nunca hay más de `VOICE_CAP` voces activas; el robo toma la más antigua |
 | T-15 | R-02 | Con deltas irregulares (incluido uno de varios ticks), el total de ticks emitidos `== floor(tiempo_total / TICK_SEC)` y llegan en orden |
-| T-16 | R-30 | Selección por vecindad: casos con 0, 1 y varios candidatos, y límite de 60° |
+| T-16 | R-30 | Selección por vecindad: casos con 0, 1 y varios candidatos, límite de 60°, gana el más cercano y todos alcanzables |
 | T-17 | R-33 | Siembra: `n` recortado a `[2, 8]`; la posición elegida respeta `MIN_ORG_DISTANCE` cuando hay lugar |
 | T-18 | R-22 | El arrastre nunca saca un nodo del radio ni lo acerca a otro por debajo de `MIN_NODE_DIST` |
 | T-19 | R-21 | La posición derivada del pulso coincide con `S`, `t` y `phi` en todo el ciclo, incluida la fracción de tick |
