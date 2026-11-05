@@ -11,12 +11,12 @@ const MODE_MICRO := 1
 
 # Los placeholders están numerados 1..3 en el archivo (R-25).
 const SAMPLE_PATH := "res://audio/placeholder/family_%d_%d.wav"
-# Cada voz deja 9 dB de headroom: con 5 organismos y puentes la suma de picos
-# supera 0 dBFS. El limitador del Master (default_bus_layout.tres) es la red de
-# seguridad; este margen evita que tenga que trabajar de más (V-11).
+# Cada voz deja 9 dB de headroom: con 6 organismos y puentes la suma de picos
+# puede superar 0 dBFS. El limitador del Master (default_bus_layout.tres) es la
+# red de seguridad; este margen evita que tenga que trabajar de más (V-11).
 const NODE_SAMPLE_DB := -9.0
 # El metrónomo queda bajo para no tapar las notas de los organismos.
-const METRONOME_DB := -18.0
+const METRONOME_DB := -28
 const REJECT_DB := -18.0
 const REJECT_FREQ_HZ := 110.0
 const REJECT_SEC := 0.09
@@ -27,7 +27,8 @@ const MICRO_VIEW_SCALE := 3.0
 # multiplicador cosmético mantiene legibles los nodos en la ventana de
 # desarrollo 1280x720; la calibración final depende de la resolución del
 # arcumai (M9). La cámara de M7 anima el zoom, no cambia esta escala.
-const MACRO_DEBUG_SCALE := 2.5
+# 3.0 agranda los organismos en Macro sin tocar el zoom de Micro.
+const MACRO_DEBUG_SCALE := 3.0
 
 @onready var _tick_label: Label = $Overlay/TickLabel
 @onready var _beat_label: Label = $Overlay/BeatLabel
@@ -41,6 +42,7 @@ const MACRO_DEBUG_SCALE := 2.5
 @onready var _world_layer: Node2D = $WorldLayer
 @onready var _voices: VoicePool = $VoicePool
 @onready var _fade: ColorRect = $Fade
+@onready var _deleting_label: Label = $DeletingLabel
 
 var _clock := Clock.new()
 var _router := InputRouter.new()
@@ -59,6 +61,7 @@ var _stick := Vector2.ZERO
 var _views: Dictionary = {}
 var _buses: Dictionary = {}
 var _bridges_view: BridgesView
+var _spawn_view: SpawnView
 
 
 func _ready() -> void:
@@ -71,8 +74,10 @@ func _ready() -> void:
 		for variant in Config.VARIANT_COUNT:
 			_samples.append(load(SAMPLE_PATH % [family + 1, variant]))
 
-	# Los puentes se dibujan detrás de los organismos: la vista se agrega antes
-	# que las vistas de organismo y se reusa en cada sesión.
+	# El destello de siembra y los puentes se dibujan detrás de los organismos:
+	# se agregan antes que las vistas de organismo y se reusan en cada sesión.
+	_spawn_view = SpawnView.new()
+	_world_layer.add_child(_spawn_view)
 	_bridges_view = BridgesView.new()
 	_world_layer.add_child(_bridges_view)
 
@@ -109,6 +114,7 @@ func _start_session() -> void:
 	# El mundo nuevo necesita el tick actual para anclar bien el organismo.
 	_world.set_tick(_clock.tick)
 	_bridges_view.setup(_world, _clock)
+	_spawn_view.setup(_world)
 	_world.organism_added.connect(_on_organism_added)
 	_world.organism_removed.connect(_on_organism_removed)
 	_world.organism_rebuilt.connect(_on_organism_rebuilt)
@@ -144,6 +150,7 @@ func _dispose_world() -> void:
 			view.queue_free()
 	_buses.clear()
 	_views.clear()
+	_spawn_view.setup(null)
 	_world = null
 
 
@@ -166,6 +173,7 @@ func _process(delta: float) -> void:
 		if view != null and view.visible:
 			view.update_visuals(_current_phase_f(organism.model), delta)
 	_bridges_view.update_visuals()
+	_spawn_view.update_visuals(delta)
 	# R-37: la inactividad se mide al final del frame; si vence, el fundido
 	# arranca y el mundo se reconstruye en el punto negro.
 	_reset.update(delta, _router.is_any_active())
@@ -264,7 +272,7 @@ func _on_button_released(action: String) -> void:
 func _press_in_macro(action: String) -> void:
 	match action:
 		"btn_1":
-			if _world.is_spawning() or _world.is_dissolving():
+			if _world.is_spawning() or _world.is_dissolving() or _world.is_spawn_charging():
 				_reject(_world.selected_organism())
 			else:
 				_enter_micro()
@@ -493,7 +501,10 @@ func _layout_views() -> void:
 	var selected := _world.selected_organism()
 	var center := Config.WORLD_SIZE * 0.5
 	if selected != null:
-		center = center.lerp(selected.position, t)
+		# En Micro se centra el centro visual (caja de los nodos), no el origen:
+		# si un nodo se arrastra lejos, el organismo entero sigue encuadrado.
+		var focus_point := selected.position + selected.model.visual_center() * view_scale
+		center = center.lerp(focus_point, t)
 	var camera_scale := lerpf(fit, micro_zoom, t)
 	_world_layer.scale = Vector2(camera_scale, camera_scale)
 	_world_layer.position = size * 0.5 - center * camera_scale
@@ -510,6 +521,9 @@ func _layout_views() -> void:
 		# al agrandarse la cámara queda un círculo enorme alrededor del organismo.
 		view.set_aura_strength(clampf(1.0 - t * 2.0, 0.0, 1.0) if is_selected else 0.0)
 		view.set_selection(organism.session.selected if (is_selected and _mode == MODE_MICRO) else -1)
+		# R-22: las flechas de arrastre solo tienen sentido en Micro con B1
+		# apretado sobre el organismo enfocado.
+		view.set_drag_hint(is_selected and _mode == MODE_MICRO and organism.session.is_dragging())
 
 
 # Suaviza el arranque y la llegada de la cámara. La forma no está fijada por la
@@ -529,6 +543,19 @@ func _update_fades() -> void:
 		if _mode == MODE_MACRO and _world.is_dissolving() and organism == _world.selected_organism():
 			target = 1.0 - 0.85 * _world.dissolve_progress()
 		view.set_fade_target(target)
+	_update_deleting_label()
+
+
+# R-34: mientras se mantiene B4 en Macro, el aviso "borrando" aparece abajo al
+# centro con el color del organismo y se intensifica con el progreso.
+func _update_deleting_label() -> void:
+	var organism := _world.selected_organism()
+	var deleting := _mode == MODE_MACRO and _world.is_dissolving() and organism != null
+	_deleting_label.visible = deleting
+	if not deleting:
+		return
+	_deleting_label.add_theme_color_override("font_color", OrganismView.family_node_color(organism.family))
+	_deleting_label.modulate.a = 0.55 + 0.45 * _world.dissolve_progress()
 
 
 func _update_labels() -> void:

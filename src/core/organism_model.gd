@@ -181,6 +181,20 @@ func move_node(node_index: int, direction: Vector2, delta: float) -> void:
 		_apply_move(index, moved)
 
 
+# Centro visual del organismo: centro de la caja que encierra sus nodos. La
+# cámara de Micro lo usa para encuadrar la forma completa aunque un nodo se haya
+# arrastrado lejos del origen; no interviene en reglas de tiempo ni de sonido.
+func visual_center() -> Vector2:
+	if nodes.is_empty():
+		return Vector2.ZERO
+	var min_point := nodes[0]
+	var max_point := nodes[0]
+	for node in nodes:
+		min_point = min_point.min(node)
+		max_point = max_point.max(node)
+	return (min_point + max_point) * 0.5
+
+
 # Arranque del nodo i dentro del ciclo (R-16).
 func node_start_of(node_index: int) -> int:
 	return starts[posmod(node_index - origin, n)]

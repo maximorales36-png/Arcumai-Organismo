@@ -237,6 +237,17 @@ Con B2 mantenido (sembrando), presionar B4 cancela la siembra.
 - V-11 ("con 5 organismos y varios puentes la mezcla no se satura ni se vuelve barro") queda para probar a oído con el volumen real del arcumai.
 - Se agregó `INSTRUCTIVO.md`: qué es el juego, qué hace cada botón, qué puede cambiar el jugador, cómo se reparte el tiempo y qué pasa en una sesión. Está pensado para explicar la instalación, no como pantalla de instrucciones.
 
+**2026-11-05 (ajustes de Macro y Micro)**
+- Macro: los organismos se dibujan 20 % más grandes (`MACRO_DEBUG_SCALE` de 2.5 a 3.0); el zoom de Micro no cambia.
+- El tope de organismos sube de 5 a 6.
+- R-33 cambia: B2 mantiene una carga de 2 s con un destello que crece en el punto de aparición. Al completarse nace el organismo y sigue el ajuste de `n` hasta soltar; soltar antes no crea nada. Después de crear uno hay un enfriamiento de 5 s antes de poder sembrar otro.
+- Las siembras nacen con `N_SPAWN = 2`; el primer organismo de la sesión sigue siendo `N_DEFAULT = 4`.
+- R-34: la disolución baja a 600 ms y muestra «borrando» abajo al centro, con el color del organismo.
+- Micro: mientras B1 está apretado, el nodo seleccionado muestra flechas en las cuatro direcciones (ayuda visual de R-22).
+- La cámara de Micro centra el centro visual del organismo (la caja que encierra sus nodos), no el origen, para que un nodo arrastrado lejos no lo saque de cuadro.
+- Queda pendiente que Maxi actualice `ESPECIFICACION.md`: `MAX_ORGANISMS`, `N_SPAWN`, `SPAWN_HOLD_MS`, `SPAWN_COOLDOWN_S`, `DISSOLVE_HOLD_MS`, R-33/R-34 y T-17; se propone T-23 para la carga y el enfriamiento.
+- Riesgo con 6 organismos y `MIN_ORG_DISTANCE = 350` en `WORLD_SIZE`: la deriva puede quedar trabada si dos organismos ya están más cerca que la distancia mínima. Se evalúa al probar.
+
 ## 10. Fuera de alcance v1
 
 - Ciclo elástico (el ciclo dura lo que dicta la geometría).

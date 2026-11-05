@@ -43,6 +43,13 @@ const FLOW_ALPHA := 0.35
 const SELECTION_GAP := 6.0
 const SELECTION_WIDTH := 1.5
 
+# Flechas de arrastre (R-22): aparecen mientras B1 está apretado para indicar
+# que el joystick puede mover el nodo en cualquier dirección.
+const DRAG_ARROW_LENGTH := 14.0
+const DRAG_ARROW_HEAD := 5.0
+const DRAG_ARROW_WIDTH := 2.0
+const DRAG_ARROW_PULSE_HZ := 2.0
+
 # Aura de Macro: el organismo seleccionado (DISENO 5.3).
 const AURA_GAP := 14.0
 const AURA_ALPHA := 0.10
@@ -66,6 +73,7 @@ var _has_head := false
 var _trail: Array[Vector2] = []
 var _flash: Array[float] = []
 var _selected := -1
+var _drag_hint := false
 var _aura_strength := 0.0
 var _fade_target := 1.0
 var _shake_node := -1
@@ -82,6 +90,7 @@ func setup(model: OrganismModel, family: int = 0) -> void:
 	_trail.clear()
 	_has_head = false
 	_selected = -1
+	_drag_hint = false
 	_aura_strength = 0.0
 	_shake_node = -1
 	_shake_whole = false
@@ -94,6 +103,15 @@ func setup(model: OrganismModel, family: int = 0) -> void:
 # Anillo del nodo seleccionado en Micro; -1 lo apaga.
 func set_selection(node_index: int) -> void:
 	_selected = node_index
+	queue_redraw()
+
+
+# R-22: mientras B1 está apretado, el nodo seleccionado muestra flechas de
+# arrastre. Es una ayuda visual, no cambia la regla de movimiento.
+func set_drag_hint(value: bool) -> void:
+	if _drag_hint == value:
+		return
+	_drag_hint = value
 	queue_redraw()
 
 
@@ -223,6 +241,8 @@ func _draw_nodes() -> void:
 		if i == _selected:
 			# El anillo dice qué nodo va a recibir el próximo gesto.
 			draw_arc(node, radius + SELECTION_GAP, 0.0, TAU, 40, Color(_pulse_color(), 0.85), SELECTION_WIDTH, true)
+			if _drag_hint:
+				_draw_drag_arrows(node, radius)
 		if is_origin:
 			draw_circle(node, radius * ORIGIN_HALO, Color(color, 0.14))
 		if _flash[i] > 0.0:
@@ -230,6 +250,23 @@ func _draw_nodes() -> void:
 			var wave := 1.0 - _flash[i]
 			draw_arc(node, radius + wave * WAVE_RADIUS, 0.0, TAU, 32, Color(color, _flash[i] * 0.7), 2.0, true)
 		draw_circle(node, radius, color)
+
+
+# Cuatro flechas alrededor del nodo seleccionado. El pulso lento de opacidad
+# las hace notar sin tapar la geometría ni el anillo de selección.
+func _draw_drag_arrows(center: Vector2, radius: float) -> void:
+	var alpha := 0.55 + 0.35 * sin(_time * TAU * DRAG_ARROW_PULSE_HZ)
+	var color := Color(_pulse_color(), clampf(alpha, 0.0, 1.0))
+	var start_radius := radius + SELECTION_GAP + 3.0
+	var directions: Array[Vector2] = [Vector2.UP, Vector2.DOWN, Vector2.LEFT, Vector2.RIGHT]
+	for direction in directions:
+		var tail := center + direction * start_radius
+		var tip := tail + direction * DRAG_ARROW_LENGTH
+		var back := -direction
+		var side := Vector2(-direction.y, direction.x)
+		draw_line(tail, tip, color, DRAG_ARROW_WIDTH, true)
+		draw_line(tip, tip + back * DRAG_ARROW_HEAD + side * DRAG_ARROW_HEAD * 0.7, color, DRAG_ARROW_WIDTH, true)
+		draw_line(tip, tip + back * DRAG_ARROW_HEAD - side * DRAG_ARROW_HEAD * 0.7, color, DRAG_ARROW_WIDTH, true)
 
 
 func _draw_pulse() -> void:
@@ -298,6 +335,12 @@ static func family_hue(family: int) -> float:
 
 static func family_pulse_color(family: int) -> Color:
 	return Color.from_hsv(fposmod(family_hue(family) + 0.08, 1.0), 0.25, 1.0)
+
+
+# Color de los nodos de una familia: lo usan el aviso de borrado y el destello
+# de siembra para anticipar el color del organismo.
+static func family_node_color(family: int) -> Color:
+	return Color.from_hsv(family_hue(family), 0.45, 0.95)
 
 
 # La cola usa el matiz saturado: a baja opacidad el color pálido se ve gris.

@@ -70,8 +70,27 @@ layout_mode = 2
 theme_override_font_sizes/font_size = 28
 text = "FPS: 0"
 
+[node name="DeletingLabel" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -200.0
+offset_top = -90.0
+offset_right = 200.0
+offset_bottom = -40.0
+grow_horizontal = 2
+grow_vertical = 0
+visible = false
+theme_override_font_sizes/font_size = 36
+text = "borrando"
+horizontal_alignment = 1
+vertical_alignment = 1
+
 [node name="Metronome" type="AudioStreamPlayer" parent="." unique_id=1698939615]
-volume_db = -20.0
+volume_db = -80.0
 
 [node name="VoicePool" type="Node" parent="." unique_id=1724511778]
 script = ExtResource("3_pool")

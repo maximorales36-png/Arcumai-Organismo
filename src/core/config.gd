@@ -14,7 +14,10 @@ const TICK_SEC := 60.0 / (BPM * TICKS_PER_BEAT)
 # --- Organismo ---
 const N_MIN := 2
 const N_MAX := 8
+# N_DEFAULT es el organismo con el que arranca la sesión; las siembras con B2
+# usan N_SPAWN para que el mundo no crezca siempre con organismos grandes.
 const N_DEFAULT := 4
+const N_SPAWN := 2
 const MIN_EDGE_TICKS := 1
 const MIN_NODE_DIST := 18.0
 const PITCH_SPAN_DEGREES := 8
@@ -31,7 +34,7 @@ const EDGE_CURVATURE_N2_MIN := 0.25
 const EDGE_CURVATURE_N2_MAX := 0.35
 
 # --- Mundo ---
-const MAX_ORGANISMS := 5
+const MAX_ORGANISMS := 6
 const MAX_BRIDGES := 6
 const WORLD_SIZE := Vector2(2400.0, 1350.0)
 const MIN_ORG_DISTANCE := 350.0
@@ -54,7 +57,11 @@ const FOCUS_FADE_S := 0.4
 const DRAG_SPEED := 180.0
 const NAV_REPEAT_FIRST_MS := 350
 const NAV_REPEAT_MS := 200
-const DISSOLVE_HOLD_MS := 1000
+const DISSOLVE_HOLD_MS := 600
+# B2 en Macro carga antes de crear el organismo; soltar antes cancela.
+const SPAWN_HOLD_MS := 2000
+# Después de crear un organismo no se puede sembrar otro por este tiempo.
+const SPAWN_COOLDOWN_S := 5.0
 const INACTIVITY_RESET_S := 90.0
 const ZOOM_TIME_S := 0.5
 const BRIGHTNESS_DEFAULT := 0.7

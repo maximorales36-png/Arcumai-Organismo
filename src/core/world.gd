@@ -28,6 +28,10 @@ var _rng: RandomNumberGenerator
 var _next_id := 1
 var _next_family := 0
 var _tick := 0
+var _spawn_charging := false
+var _spawn_charge := 0.0
+var _spawn_point := Vector2.ZERO
+var _spawn_cooldown := 0.0
 var _spawning := false
 var _spawn_index := -1
 var _spawn_previous_id := -1
@@ -74,6 +78,33 @@ func is_spawning() -> bool:
 	return _spawning
 
 
+# Carga de B2 antes de crear el organismo (R-33). Mientras dura, la vista
+# dibuja el destello en spawn_point().
+func is_spawn_charging() -> bool:
+	return _spawn_charging
+
+
+func spawn_charge_progress() -> float:
+	if not _spawn_charging:
+		return 0.0
+	return clampf(_spawn_charge / (Config.SPAWN_HOLD_MS / 1000.0), 0.0, 1.0)
+
+
+func spawn_point() -> Vector2:
+	return _spawn_point
+
+
+# Enfriamiento posterior a una siembra: bloquea B2 sin cambiar la selección.
+func spawn_cooldown_left() -> float:
+	return _spawn_cooldown
+
+
+# Familia que va a recibir el próximo organismo (R-25): la vista de la carga
+# usa su color para anticipar el destello.
+func next_family() -> int:
+	return _next_family
+
+
 func is_dissolving() -> bool:
 	return _dissolving
 
@@ -91,7 +122,9 @@ func dissolve_progress() -> float:
 
 # Agrega un organismo ya sonando. La familia rota (R-25) y la posición sale de
 # 20 candidatas que maximizan la distancia mínima a los existentes (R-33).
-func add_organism(node_count: int) -> OrganismState:
+# `at` permite usar el punto que la carga de B2 ya venía mostrando; si se omite,
+# se sortea una posición nueva.
+func add_organism(node_count: int, at: Vector2 = Vector2.INF) -> OrganismState:
 	var organism := OrganismState.new()
 	organism.id = _next_id
 	_next_id += 1
@@ -99,7 +132,7 @@ func add_organism(node_count: int) -> OrganismState:
 	_next_family = (_next_family + 1) % Config.FAMILY_COUNT
 	organism.model = OrganismModel.new(organism.id, node_count, _tick, _rng)
 	organism.session = MicroSession.new(organism.model)
-	organism.position = pick_position(_positions(), _rng)
+	organism.position = at if at != Vector2.INF else pick_position(_positions(), _rng)
 	_retarget_drift(organism)
 	organisms.append(organism)
 	organism_added.emit(organism)
@@ -116,6 +149,10 @@ func select(index: int) -> void:
 # R-30: un empuje elige el organismo vecino en esa dirección. Durante la
 # siembra el joystick izquierda/derecha cambia n en pasos de 1 (R-33).
 func nav_step(direction: Vector2) -> void:
+	# Durante la carga todavía no hay organismo que ajustar ni selección que
+	# mover: el joystick se ignora hasta que el destello completa.
+	if _spawn_charging:
+		return
 	if _spawning:
 		var step := 0
 		if direction.x > 0.0:
@@ -137,11 +174,16 @@ func nav_step(direction: Vector2) -> void:
 	select(next)
 
 
-# R-33: B2 crea el organismo en el acto y ya suena. Si no hay lugar, rechazo.
+# R-33: B2 mantiene una carga de SPAWN_HOLD_MS; al completarla se crea el
+# organismo y sigue el ajuste de n hasta soltar. Soltar antes no crea nada.
+# Después de una siembra hay un enfriamiento antes de poder sembrar otra.
 func b2_pressed() -> void:
-	if _spawning:
+	if _spawn_charging or _spawning:
 		return
 	if _dissolving:
+		rejected.emit()
+		return
+	if _spawn_cooldown > 0.0:
 		rejected.emit()
 		return
 	if organisms.size() >= Config.MAX_ORGANISMS:
@@ -150,19 +192,26 @@ func b2_pressed() -> void:
 
 	var previous := selected_organism()
 	_spawn_previous_id = previous.id if previous != null else -1
-	add_organism(Config.N_DEFAULT)
-	_spawning = true
-	_spawn_index = organisms.size() - 1
-	select(_spawn_index)
+	_spawn_charging = true
+	_spawn_charge = 0.0
+	# El punto se fija al empezar la carga para que el destello y el organismo
+	# que aparece después coincidan.
+	_spawn_point = pick_position(_positions(), _rng)
 
 
 func b2_released() -> void:
+	if _spawn_charging:
+		_cancel_charge()
 	_spawning = false
 	_spawn_index = -1
 
 
-# R-34: B4 mantiene la disolución. Durante la siembra, B4 cancela (R-33).
+# R-34: B4 mantiene la disolución. Durante la carga o la siembra, B4 cancela
+# (R-33).
 func b4_pressed() -> void:
+	if _spawn_charging:
+		_cancel_charge()
+		return
 	if _spawning:
 		_cancel_spawn()
 		return
@@ -184,7 +233,7 @@ func b4_released() -> void:
 # R-28: B3 en Macro arma el gesto de puente; la dirección llega como cambio de
 # joystick. Durante una siembra o disolución no hay puente posible.
 func b3_pressed() -> void:
-	if _spawning or _dissolving:
+	if _spawn_charging or _spawning or _dissolving:
 		rejected.emit()
 		return
 	_connecting = true
@@ -203,6 +252,8 @@ func reset_gestures() -> void:
 # R-28: B3 mantenido + dirección. El vecino se elige con la misma regla que
 # R-30; si el puente ya existe se quita, y si no hay lugar se rechaza.
 func connect_toward(direction: Vector2) -> void:
+	if _spawn_charging or _spawning or _dissolving:
+		return
 	var source := selected_organism()
 	if source == null:
 		return
@@ -241,6 +292,10 @@ func flush_echoes(tick: int) -> void:
 # decide ningún disparo ni toca el modelo temporal.
 func update(delta: float) -> void:
 	_drift(delta)
+	if _spawn_cooldown > 0.0:
+		_spawn_cooldown = maxf(0.0, _spawn_cooldown - delta)
+	if _spawn_charging:
+		_advance_charge(delta)
 	if not _dissolving:
 		return
 	_dissolve_elapsed += delta
@@ -295,6 +350,27 @@ static func random_world_point(rng: RandomNumberGenerator) -> Vector2:
 		rng.randf_range(margin, Config.WORLD_SIZE.x - margin),
 		rng.randf_range(margin, Config.WORLD_SIZE.y - margin)
 	)
+
+
+# La carga completa crea el organismo en el punto que se venía mostrando y
+# arranca el enfriamiento. La selección pasa al organismo nuevo para que el
+# ajuste de n con izquierda/derecha siga funcionando (R-33).
+func _advance_charge(delta: float) -> void:
+	_spawn_charge += delta
+	if _spawn_charge < Config.SPAWN_HOLD_MS / 1000.0:
+		return
+	_spawn_charging = false
+	_spawn_charge = 0.0
+	add_organism(Config.N_SPAWN, _spawn_point)
+	_spawn_cooldown = Config.SPAWN_COOLDOWN_S
+	_spawning = true
+	_spawn_index = organisms.size() - 1
+	select(_spawn_index)
+
+
+func _cancel_charge() -> void:
+	_spawn_charging = false
+	_spawn_charge = 0.0
 
 
 func _change_spawn_n(step: int) -> void:
