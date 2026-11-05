@@ -1,0 +1,8 @@
+[gd_resource type="AudioBusLayout" format=3 uid="uid://5id7e1jc85xj"]
+
+[sub_resource type="AudioEffectHardLimiter" id="AudioEffectHardLimiter_main"]
+ceiling_db = -1.0
+
+[resource]
+bus/0/effect/0/effect = SubResource("AudioEffectHardLimiter_main")
+bus/0/effect/0/enabled = true

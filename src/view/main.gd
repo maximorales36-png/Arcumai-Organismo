@@ -11,8 +11,11 @@ const MODE_MICRO := 1
 
 # Los placeholders están numerados 1..3 en el archivo (R-25).
 const SAMPLE_PATH := "res://audio/placeholder/family_%d_%d.wav"
+# Cada voz deja 9 dB de headroom: con 5 organismos y puentes la suma de picos
+# supera 0 dBFS. El limitador del Master (default_bus_layout.tres) es la red de
+# seguridad; este margen evita que tenga que trabajar de más (V-11).
+const NODE_SAMPLE_DB := -9.0
 # El metrónomo queda bajo para no tapar las notas de los organismos.
-const NODE_SAMPLE_DB := -6.0
 const METRONOME_DB := -18.0
 const REJECT_DB := -18.0
 const REJECT_FREQ_HZ := 110.0

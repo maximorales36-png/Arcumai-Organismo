@@ -230,6 +230,12 @@ Con B2 mantenido (sembrando), presionar B4 cancela la siembra.
 - Se actualizó `ESPECIFICACION.md` R-30 y T-16 a la regla "más cercano dentro del cono", como pidió Maxi.
 - R-37 quedó cubierto por **T-22** en `ESPECIFICACION.md` (aprobado por Maxi); el test se llama `test_session_reset.gd`.
 
+**2026-11-05 (M9, ajuste de mezcla)**
+- El limitador que se había puesto en el Master no estaba en el proyecto: `default_bus_layout.tres` existía vacío (Master con 0 efectos), por eso no hacía nada. Ahora el layout está versionado con un `AudioEffectHardLimiter` en el Master, techo −1 dB y pre-gain 0.
+- `NODE_SAMPLE_DB` bajó de −6 a −9 dB para dejar 3 dB de headroom por voz. Medición fuera de línea con los WAV crudos (40 s): el peor caso de 5 organismos con ancla coincidente y 6 puentes pasaba de 1.67 de pico (4.4 dBFS, 1.83 % de muestras clipadas); con −9 dB queda en 1.18 (1.4 dBFS) y el limitador lo mantiene por debajo de −1 dBFS.
+- R-36 no cambia: los buses de organismo siguen en 0 dB en Macro y en `FOCUS_OTHERS_DB` en Micro. El limitador es del Master, después de la suma de todos los buses.
+- V-11 ("con 5 organismos y varios puentes la mezcla no se satura ni se vuelve barro") queda para probar a oído con el volumen real del arcumai.
+
 ## 10. Fuera de alcance v1
 
 - Ciclo elástico (el ciclo dura lo que dicta la geometría).

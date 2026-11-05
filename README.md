@@ -79,6 +79,14 @@ godot --headless --path . --script res://tools/generate_placeholders.gd
 El script es de desarrollo: no se usa en tiempo de ejecución. Cuando Maxi aporte
 las muestras reales, van en `audio/<familia>/<variante>.wav`.
 
+## Mezcla y headroom
+
+El Master lleva un limitador (`AudioEffectHardLimiter`, techo −1 dB) definido en
+`default_bus_layout.tres`. Cada voz de organismo suena a `NODE_SAMPLE_DB`
+(−9 dB) para dejar margen: con 5 organismos y puentes la suma de picos supera
+0 dBFS. Los buses de organismo siguen la regla de foco de R-36 (0 dB en Macro,
+`FOCUS_OTHERS_DB` para los no enfocados en Micro).
+
 ## Correr los tests
 
 En Windows:
