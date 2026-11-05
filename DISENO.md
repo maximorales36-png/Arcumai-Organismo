@@ -203,6 +203,11 @@ Con B2 mantenido (sembrando), presionar B4 cancela la siembra.
 - Se mantiene `MACRO_DEBUG_SCALE` de la escena de desarrollo: a `MACRO_ORG_SCALE = 0.3` y 1280x720 los nodos quedan en ~1,4 px y V-02 no se lee. La calibración final depende de la resolución del arcumai (M9).
 - M7 no tiene criterio `[SCRIPT]`; la cámara y la mezcla se verificaron con un script temporal (borrado) y quedan para V-03/V-09. Si se quiere cubrir R-36 por script, propongo `T-21`.
 
+**2026-11-05 (corrección de R-30)**
+- La selección por vecindad elige, dentro del cono de 60°, el organismo **más cercano**; a igual distancia, el mejor alineado. Antes ganaba siempre el de menor ángulo y con 5 organismos podía quedar uno inalcanzable: desde otro, en las 8 direcciones, siempre había un tercero un poco más alineado. Reproducido en 5 de 900 disposiciones reales (3 iniciales + 2 siembras con deriva).
+- La regla anterior era literal a R-30, así que el cambio es de especificación: R-30 pasa a "el candidato más cercano dentro del cono de 60°; en empate, el de menor ángulo". Queda pendiente que Maxi actualice `ESPECIFICACION.md`.
+- T-16 se reescribió para la regla nueva e incluye una disposición real de 5 organismos donde todos deben ser alcanzables desde todos.
+
 ## 10. Fuera de alcance v1
 
 - Ciclo elástico (el ciclo dura lo que dicta la geometría).

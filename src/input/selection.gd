@@ -1,8 +1,8 @@
-# Selección por vecindad (R-30): elige el candidato más alineado con el empuje
-# del joystick, con un máximo de 60° y desempate por cercanía a la referencia.
-# Es una función pura, sin estado: la usan tanto los nodos (Micro) como los
-# organismos (Macro). Devuelve el índice del candidato o -1 si no hay ninguno.
-# No conoce escenas, audio ni el modelo: recibe posiciones y una dirección.
+# Selección por vecindad (R-30): entre los candidatos dentro de un cono de 60°
+# alrededor del empuje del joystick, gana el más cercano a la referencia; a igual
+# distancia, el mejor alineado. Es una función pura, sin estado: la usan tanto
+# los nodos (Micro) como los organismos (Macro). Devuelve el índice del
+# candidato o -1 si no hay ninguno. No conoce escenas, audio ni el modelo.
 
 class_name Selection
 extends RefCounted
@@ -16,8 +16,8 @@ static func pick(reference: Vector2, direction: Vector2, candidates: Array[Vecto
 		return -1
 
 	var best := -1
-	var best_angle := MAX_ANGLE_DEGREES + EPSILON
 	var best_distance := INF
+	var best_angle := MAX_ANGLE_DEGREES + EPSILON
 
 	for i in candidates.size():
 		var offset := candidates[i] - reference
@@ -30,13 +30,14 @@ static func pick(reference: Vector2, direction: Vector2, candidates: Array[Vecto
 		if angle > MAX_ANGLE_DEGREES + EPSILON:
 			continue
 
-		# Gana el ángulo menor; si empatan, el más cercano a la referencia.
-		if angle < best_angle - EPSILON:
+		# Gana el más cercano: es el "vecino" en esa dirección. Si dos están a la
+		# misma distancia, gana el que está mejor alineado con el joystick.
+		if distance < best_distance - EPSILON:
+			best = i
+			best_distance = distance
+			best_angle = angle
+		elif absf(distance - best_distance) <= EPSILON and angle < best_angle - EPSILON:
 			best = i
 			best_angle = angle
-			best_distance = distance
-		elif absf(angle - best_angle) <= EPSILON and distance < best_distance:
-			best = i
-			best_distance = distance
 
 	return best

@@ -193,10 +193,10 @@ func _on_button_released(action: String) -> void:
 		_release_in_micro(action)
 
 
-# En Macro: B1 entra a Micro (corte directo, sin animación todavía: M7), B2
-# siembra, B3 es puentes (M8) y B4 disuelve. B1 se rechaza mientras hay una
-# siembra o disolución en curso: entrar a Micro dejaría el gesto a medias y la
-# especificación no define qué hacer con la siembra abierta.
+# En Macro: B1 entra a Micro (con el zoom de M7), B2 siembra, B3 es puentes
+# (M8) y B4 disuelve. B1 se rechaza mientras hay una siembra o disolución en
+# curso: entrar a Micro dejaría el gesto a medias y la especificación no define
+# qué hacer con la siembra abierta.
 func _press_in_macro(action: String) -> void:
 	match action:
 		"btn_1":
