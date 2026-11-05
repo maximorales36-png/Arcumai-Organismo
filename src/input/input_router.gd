@@ -29,6 +29,12 @@ func update(delta: float) -> void:
 	_update_stick(delta)
 
 
+# R-37: una entrada sostenida (joystick inclinado o cualquier botón apretado)
+# cuenta como actividad aunque no haya flancos nuevos.
+func is_any_active() -> bool:
+	return _direction != Vector2.ZERO or not _pressed.is_empty()
+
+
 func _update_stick(delta: float) -> void:
 	var direction := read_direction()
 	if direction != _direction:

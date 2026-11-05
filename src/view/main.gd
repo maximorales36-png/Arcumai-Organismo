@@ -1,12 +1,11 @@
-# Escena de depuración de M7: el mundo Macro, la cámara que entra y sale del
-# organismo seleccionado, y la mezcla por foco. Traduce los gestos a las reglas
-# del World (selección, siembra, disolución) o de la MicroSession del organismo
-# enfocado. Crea una vista y un bus por organismo; las reglas viven en World,
-# MicroSession y OrganismBus, no acá.
+# Escena principal (M9): sesión de instalación. Arranca en Micro con un
+# organismo (N_DEFAULT, familia 0) y se reinicia por inactividad con un fundido
+# de 2 s (R-37). Traduce los gestos a las reglas de World o de la MicroSession
+# del organismo enfocado; crea una vista y un bus por organismo. Las reglas
+# viven en World, MicroSession, SessionReset y OrganismBus, no acá.
 
 extends Control
 
-const DEV_SEED := 20260101
 const MODE_MACRO := 0
 const MODE_MICRO := 1
 
@@ -27,10 +26,6 @@ const MICRO_VIEW_SCALE := 3.0
 # arcumai (M9). La cámara de M7 anima el zoom, no cambia esta escala.
 const MACRO_DEBUG_SCALE := 2.5
 
-# Tres organismos de distinto N y familia para ver polimetría y V-02 en Macro.
-# El estado inicial definitivo (uno solo en Micro) es de M9.
-const INITIAL_COUNTS := [3, 4, 5]
-
 @onready var _tick_label: Label = $Overlay/TickLabel
 @onready var _beat_label: Label = $Overlay/BeatLabel
 @onready var _scale_label: Label = $Overlay/ScaleLabel
@@ -42,15 +37,17 @@ const INITIAL_COUNTS := [3, 4, 5]
 @onready var _metronome: AudioStreamPlayer = $Metronome
 @onready var _world_layer: Node2D = $WorldLayer
 @onready var _voices: VoicePool = $VoicePool
+@onready var _fade: ColorRect = $Fade
 
 var _clock := Clock.new()
 var _router := InputRouter.new()
+var _reset := SessionReset.new()
 var _world: World
-var _mode := MODE_MACRO
+var _mode := MODE_MICRO
 # 0 = Macro, 1 = Micro. La cámara y el aura lo siguen; el modo de input cambia
 # en el acto para que los botones respondan sin esperar la animación.
-var _zoom := 0.0
-var _zoom_target := 0.0
+var _zoom := 1.0
+var _zoom_target := 1.0
 var _samples: Array[AudioStream] = []
 var _reject_stream: AudioStream
 var _scale: Array = []
@@ -62,49 +59,89 @@ var _bridges_view: BridgesView
 
 
 func _ready() -> void:
-	_action_label.text = "última acción: (ninguna)"
-	_note_label.text = "última nota: (ninguna)"
 	_metronome.stream = ClickStream.make()
 	_metronome.volume_db = METRONOME_DB
 	_reject_stream = ClickStream.make(REJECT_FREQ_HZ, REJECT_SEC)
 	_clock.tick_emitted.connect(_on_tick_emitted)
 
-	# La escala y la tónica se sortean una vez por sesión y no cambian (R-24).
-	var rng := RandomNumberGenerator.new()
-	rng.seed = DEV_SEED
-	var scale_index := rng.randi_range(0, Config.SCALES.size() - 1)
-	_scale = Config.SCALES[scale_index]
-	_tonic = rng.randi_range(0, 11)
-	_scale_label.text = "escala: %d   tónica: %d" % [scale_index + 1, _tonic]
-
 	for family in Config.FAMILY_COUNT:
 		for variant in Config.VARIANT_COUNT:
 			_samples.append(load(SAMPLE_PATH % [family + 1, variant]))
 
-	_world = World.new(rng)
 	# Los puentes se dibujan detrás de los organismos: la vista se agrega antes
-	# que las vistas de organismo.
+	# que las vistas de organismo y se reusa en cada sesión.
 	_bridges_view = BridgesView.new()
-	_bridges_view.setup(_world, _clock)
 	_world_layer.add_child(_bridges_view)
-	_world.organism_added.connect(_on_organism_added)
-	_world.organism_removed.connect(_on_organism_removed)
-	_world.organism_rebuilt.connect(_on_organism_rebuilt)
-	_world.selection_changed.connect(_on_world_selection_changed)
-	_world.rejected.connect(_on_world_rejected)
 
 	_router.nav_step.connect(_on_nav_step)
 	_router.stick_changed.connect(_on_stick_changed)
 	_router.button_pressed.connect(_on_button_pressed)
 	_router.button_released.connect(_on_button_released)
 
-	for count in INITIAL_COUNTS:
-		_world.add_organism(count)
-	_world.select(0)
+	# R-37: el reinicio se avisa en el punto negro del fundido.
+	_reset.reset_due.connect(_start_session)
 
+	# El overlay es de desarrollo: en el export de la instalación no se muestra.
+	$Overlay.visible = OS.is_debug_build()
+
+	_start_session()
+	get_viewport().size_changed.connect(_layout_views)
+
+
+# R-37: estado inicial de una sesión. Un organismo N_DEFAULT de la familia 0 en
+# Micro, sin puentes, con escala y tónica nuevas. El reloj no se toca.
+func _start_session() -> void:
+	_dispose_world()
+
+	# Cada sesión sortea de nuevo escala y tónica (R-24, R-37). La semilla sale
+	# del reloj del sistema: el juego no debe repetir la misma pieza siempre.
+	var rng := RandomNumberGenerator.new()
+	rng.seed = Time.get_ticks_usec()
+	var scale_index := rng.randi_range(0, Config.SCALES.size() - 1)
+	_scale = Config.SCALES[scale_index]
+	_tonic = rng.randi_range(0, 11)
+	_scale_label.text = "escala: %d   tónica: %d" % [scale_index + 1, _tonic]
+
+	_world = World.new(rng)
+	# El mundo nuevo necesita el tick actual para anclar bien el organismo.
+	_world.set_tick(_clock.tick)
+	_bridges_view.setup(_world, _clock)
+	_world.organism_added.connect(_on_organism_added)
+	_world.organism_removed.connect(_on_organism_removed)
+	_world.organism_rebuilt.connect(_on_organism_rebuilt)
+	_world.selection_changed.connect(_on_world_selection_changed)
+	_world.rejected.connect(_on_world_rejected)
+
+	_mode = MODE_MICRO
+	_zoom = 1.0
+	_zoom_target = 1.0
+	_action_label.text = "última acción: (ninguna)"
+	_note_label.text = "última nota: (ninguna)"
+	_world.add_organism(Config.N_DEFAULT)
+	_world.select(0)
+	_reset.note_activity()
+
+	_update_focus_targets()
 	_layout_views()
 	_update_labels()
-	get_viewport().size_changed.connect(_layout_views)
+
+
+# Suelta la sesión anterior: corta sus voces, libera vistas y buses y descarta
+# el mundo. Las señales del mundo viejo mueren con él (RefCounted).
+func _dispose_world() -> void:
+	if _world == null:
+		return
+	for organism in _world.organisms:
+		var bus: OrganismBus = _buses.get(organism.id)
+		if bus != null:
+			_voices.stop_bus(bus.bus_name())
+			bus.dispose()
+		var view: OrganismView = _views.get(organism.id)
+		if view != null:
+			view.queue_free()
+	_buses.clear()
+	_views.clear()
+	_world = null
 
 
 # El reloj se alimenta con el delta real: es el único lugar donde el delta
@@ -126,6 +163,10 @@ func _process(delta: float) -> void:
 		if view != null and view.visible:
 			view.update_visuals(_current_phase_f(organism.model), delta)
 	_bridges_view.update_visuals()
+	# R-37: la inactividad se mide al final del frame; si vence, el fundido
+	# arranca y el mundo se reconstruye en el punto negro.
+	_reset.update(delta, _router.is_any_active())
+	_fade.color.a = _reset.fade_alpha()
 	_fps_label.text = "FPS: %d" % Engine.get_frames_per_second()
 
 
@@ -178,6 +219,7 @@ func _play_node(organism: OrganismState, node_index: int) -> void:
 
 
 func _on_nav_step(direction: Vector2) -> void:
+	_reset.note_activity()
 	if _mode == MODE_MACRO:
 		_world.nav_step(direction)
 		return
@@ -187,6 +229,7 @@ func _on_nav_step(direction: Vector2) -> void:
 
 
 func _on_stick_changed(direction: Vector2) -> void:
+	_reset.note_activity()
 	_stick = direction
 	# R-28: con B3 apretado el joystick conecta, no navega. Se usa el cambio de
 	# dirección (sin auto-repetición) para que un gesto cree o quite un puente.
@@ -196,6 +239,7 @@ func _on_stick_changed(direction: Vector2) -> void:
 
 
 func _on_button_pressed(action: String) -> void:
+	_reset.note_activity()
 	if _mode == MODE_MACRO:
 		_press_in_macro(action)
 	else:
@@ -203,6 +247,7 @@ func _on_button_pressed(action: String) -> void:
 
 
 func _on_button_released(action: String) -> void:
+	_reset.note_activity()
 	if _mode == MODE_MACRO:
 		_release_in_macro(action)
 	else:

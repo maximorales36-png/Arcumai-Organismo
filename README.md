@@ -20,12 +20,14 @@ la terminal:
 godot --path .
 ```
 
-La escena `src/view/main.tscn` es la de depuración: arranca en Macro con tres
-organismos de distinto N (3, 4 y 5) que pulsan a la vez. B1 entra a la vista
-Micro del organismo seleccionado y B4 vuelve a Macro; la cámara hace un zoom de
-0,5 s y la mezcla por foco acompaña (en Micro el enfocado suena completo y los
-demás quedan atrás). El overlay muestra tick, beat, escala, modo, organismos, puentes, selección,
-variante, brillo, última acción, última nota y FPS.
+La escena `src/view/main.tscn` es la de la instalación: arranca en Micro con un
+organismo (N=4, familia 0) ya sonando, sin puentes. Cada sesión sortea escala y
+tónica. B1/B4 alternan entre Micro y Macro; la cámara hace un zoom de 0,5 s y la
+mezcla por foco acompaña. Tras `INACTIVITY_RESET_S` (90 s) sin ninguna entrada,
+un fundido de 2 s vuelve al estado inicial con escala y tónica nuevas; el reloj
+no se detiene. El overlay de depuración (tick, beat, escala, modo, organismos,
+puentes, selección, variante, brillo, última acción, última nota y FPS) solo se
+muestra en builds de desarrollo, no en el export.
 
 ### Puentes
 
@@ -105,5 +107,7 @@ New-Item -ItemType Directory -Force build\linux
 godot --headless --path . --export-release "Linux x86_64" build/linux/cultivo.x86_64
 ```
 
-Godot no crea la carpeta de destino: si no existe, el export falla. El export
-debe correr en Fedora sin dependencias extra (se prueba en M9).
+Godot no crea la carpeta de destino: si no existe, el export falla. El preset
+excluye `tests/`, `tools/` y `build/`, así el paquete no lleva código de
+desarrollo. El export se generó con Godot 4.7.2 en Windows; falta probar el
+binario en Fedora y el input del arcumai (M9).

@@ -218,6 +218,17 @@ Con B2 mantenido (sembrando), presionar B4 cancela la siembra.
 - `OrganismModel.emit_echo` emite `node_fired(..., is_echo = true)` sin tocar `fired`, el origen ni el ancla: un eco suena pero no altera el ciclo del receptor.
 - La escena de depuración muestra la cantidad de puentes en el overlay.
 
+**2026-11-05 (M9)**
+- El estado inicial de una sesión es un organismo `N_DEFAULT` de la familia 0 en Micro, ya sonando y sin puentes. La escena arranca con la cámara ya en Micro (`_zoom = 1`) y el modo de input en Micro.
+- Cada sesión sortea escala y tónica con una semilla nueva (`Time.get_ticks_usec()`): la instalación no repite la misma pieza. No se usa el RNG global; el `RandomNumberGenerator` se inyecta igual que en el resto del núcleo.
+- R-37 vive en `SessionReset` (`RefCounted`): acumula tiempo sin entrada y dispara un fundido de 2 s. Avisa `reset_due` en el punto negro (1 s) para reconstruir el mundo mientras la pantalla está tapada; a los 2 s el velo vuelve a transparente. El reloj no se detiene.
+- El reinicio crea un `World` nuevo con el tick actual (para anclar bien el organismo), reconecta las señales, reusa la vista de puentes y descarta las vistas y buses anteriores. Vuelve a Micro con un solo organismo.
+- Una entrada sostenida (joystick inclinado o botón apretado) cuenta como actividad: `InputRouter.is_any_active()` evita que la instalación se reinicie mientras alguien interactúa sin generar flancos nuevos.
+- El overlay de depuración se oculta en el export (`OS.is_debug_build()`): en la instalación no se ve tick, FPS ni estado interno. En el editor sigue visible para probar.
+- Revisión de rechazos: B2 durante una disolución ahora rechaza (antes quedaba en silencio). El resto de las acciones imposibles ya respondían por R-31.
+- El preset de export excluye `tests/`, `tools/` y `build/`. Se generó `build/linux/cultivo.x86_64` + `cultivo.pck` con Godot 4.7.2 en Windows; queda probarlo en Fedora y con el input real del arcumai.
+- Se actualizó `ESPECIFICACION.md` R-30 y T-16 a la regla "más cercano dentro del cono", como pidió Maxi.
+
 ## 10. Fuera de alcance v1
 
 - Ciclo elástico (el ciclo dura lo que dicta la geometría).

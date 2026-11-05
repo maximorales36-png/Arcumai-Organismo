@@ -139,7 +139,10 @@ func nav_step(direction: Vector2) -> void:
 
 # R-33: B2 crea el organismo en el acto y ya suena. Si no hay lugar, rechazo.
 func b2_pressed() -> void:
-	if _spawning or _dissolving:
+	if _spawning:
+		return
+	if _dissolving:
+		rejected.emit()
 		return
 	if organisms.size() >= Config.MAX_ORGANISMS:
 		rejected.emit()
