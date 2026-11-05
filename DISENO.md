@@ -235,6 +235,7 @@ Con B2 mantenido (sembrando), presionar B4 cancela la siembra.
 - `NODE_SAMPLE_DB` bajó de −6 a −9 dB para dejar 3 dB de headroom por voz. Medición fuera de línea con los WAV crudos (40 s): el peor caso de 5 organismos con ancla coincidente y 6 puentes pasaba de 1.67 de pico (4.4 dBFS, 1.83 % de muestras clipadas); con −9 dB queda en 1.18 (1.4 dBFS) y el limitador lo mantiene por debajo de −1 dBFS.
 - R-36 no cambia: los buses de organismo siguen en 0 dB en Macro y en `FOCUS_OTHERS_DB` en Micro. El limitador es del Master, después de la suma de todos los buses.
 - V-11 ("con 5 organismos y varios puentes la mezcla no se satura ni se vuelve barro") queda para probar a oído con el volumen real del arcumai.
+- Se agregó `INSTRUCTIVO.md`: qué es el juego, qué hace cada botón, qué puede cambiar el jugador, cómo se reparte el tiempo y qué pasa en una sesión. Está pensado para explicar la instalación, no como pantalla de instrucciones.
 
 ## 10. Fuera de alcance v1
 

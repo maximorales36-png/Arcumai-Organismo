@@ -6,6 +6,9 @@ al circular un pulso, y que la persona deforma y conecta.
 Las reglas del juego están en `DISENO.md`, `ESPECIFICACION.md` y `PLAN.md`.
 Este archivo solo cubre cómo correr y empaquetar el proyecto.
 
+Para entender qué pasa en el juego y qué hace cada botón, ver
+[`INSTRUCTIVO.md`](INSTRUCTIVO.md).
+
 ## Requisitos
 
 - Godot 4.7.2 (el editor usado en desarrollo).
