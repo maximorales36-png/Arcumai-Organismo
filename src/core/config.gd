@@ -34,7 +34,7 @@ const EDGE_CURVATURE_N2_MIN := 0.25
 const EDGE_CURVATURE_N2_MAX := 0.35
 
 # --- Mundo ---
-const MAX_ORGANISMS := 6
+const MAX_ORGANISMS := 5
 const MAX_BRIDGES := 6
 const WORLD_SIZE := Vector2(2400.0, 1350.0)
 const MIN_ORG_DISTANCE := 350.0
@@ -59,12 +59,12 @@ const NAV_REPEAT_FIRST_MS := 350
 const NAV_REPEAT_MS := 200
 const DISSOLVE_HOLD_MS := 600
 # B2 en Macro carga antes de crear el organismo; soltar antes cancela.
-const SPAWN_HOLD_MS := 2000
+const SPAWN_HOLD_MS := 1200
 # Después de crear un organismo no se puede sembrar otro por este tiempo.
 const SPAWN_COOLDOWN_S := 5.0
 const INACTIVITY_RESET_S := 90.0
 const ZOOM_TIME_S := 0.5
-const BRIGHTNESS_DEFAULT := 0.7
+const BRIGHTNESS_DEFAULT := 0.8
 const BRIGHTNESS_SPEED := 0.8
 
 # Escalas en semitonos desde la tónica, en el orden del sorteo de R-24.

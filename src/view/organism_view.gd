@@ -50,6 +50,12 @@ const DRAG_ARROW_HEAD := 5.0
 const DRAG_ARROW_WIDTH := 2.0
 const DRAG_ARROW_PULSE_HZ := 2.0
 
+# Brillo visual (R-26/R-35): el mismo parámetro que abre el filtro también
+# oscurece el dibujo. Por debajo de BRIGHTNESS_FULL el organismo se apaga de a
+# poco; por arriba, el halo se abre.
+const BRIGHTNESS_FLOOR := 0.05
+const BRIGHTNESS_FULL := 0.75
+
 # Aura de Macro: el organismo seleccionado (DISENO 5.3).
 const AURA_GAP := 14.0
 const AURA_ALPHA := 0.10
@@ -74,6 +80,7 @@ var _trail: Array[Vector2] = []
 var _flash: Array[float] = []
 var _selected := -1
 var _drag_hint := false
+var _brightness := Config.BRIGHTNESS_DEFAULT
 var _aura_strength := 0.0
 var _fade_target := 1.0
 var _shake_node := -1
@@ -91,6 +98,7 @@ func setup(model: OrganismModel, family: int = 0) -> void:
 	_has_head = false
 	_selected = -1
 	_drag_hint = false
+	_brightness = Config.BRIGHTNESS_DEFAULT
 	_aura_strength = 0.0
 	_shake_node = -1
 	_shake_whole = false
@@ -113,6 +121,33 @@ func set_drag_hint(value: bool) -> void:
 		return
 	_drag_hint = value
 	queue_redraw()
+
+
+# R-26/R-35: el brillo del organismo. Es el mismo valor que usa el filtro de
+# audio: bajar el brillo apaga el dibujo y subirlo lo abre.
+func set_brightness(value: float) -> void:
+	var clamped := clampf(value, 0.0, 1.0)
+	if is_equal_approx(clamped, _brightness):
+		return
+	_brightness = clamped
+	queue_redraw()
+
+
+# 0 = apagado, 1 = totalmente claro.
+func _brightness_factor() -> float:
+	return clampf((_brightness - BRIGHTNESS_FLOOR) / (BRIGHTNESS_FULL - BRIGHTNESS_FLOOR), 0.0, 1.0)
+
+
+# 0 = sin halo extra, 1 = halo al máximo (solo por encima del brillo normal).
+func _brightness_glow() -> float:
+	return clampf((_brightness - BRIGHTNESS_FULL) / (1.0 - BRIGHTNESS_FULL), 0.0, 1.0)
+
+
+# Multiplica una opacidad por el brillo: bajar el brillo apaga los brillos del
+# organismo y subirlo los refuerza.
+func _alpha(value: float) -> float:
+	var scaled := value * lerpf(0.35, 1.0, _brightness_factor()) * (1.0 + 0.6 * _brightness_glow())
+	return clampf(scaled, 0.0, 1.0)
 
 
 # Intensidad del aura de foco (0 a 1). En Macro está en 1 para el seleccionado;
@@ -182,8 +217,8 @@ func _draw() -> void:
 func _draw_aura() -> void:
 	var radius := Config.r_max(_model.n) + AURA_GAP
 	var color := _pulse_color()
-	draw_circle(Vector2.ZERO, radius, Color(color, AURA_ALPHA * _aura_strength))
-	draw_arc(Vector2.ZERO, radius, 0.0, TAU, 64, Color(color, AURA_RING_ALPHA * _aura_strength), AURA_RING_WIDTH, true)
+	draw_circle(Vector2.ZERO, radius, Color(color, _alpha(AURA_ALPHA * _aura_strength)))
+	draw_arc(Vector2.ZERO, radius, 0.0, TAU, 64, Color(color, _alpha(AURA_RING_ALPHA * _aura_strength)), AURA_RING_WIDTH, true)
 
 
 func _update_head(phi_f: float, delta: float) -> void:
@@ -215,7 +250,7 @@ func _draw_edges() -> void:
 
 
 func _draw_flow() -> void:
-	var color := Color(_pulse_color(), FLOW_ALPHA)
+	var color := Color(_pulse_color(), _alpha(FLOW_ALPHA))
 	for i in _model.n:
 		var length := _model.edge_lengths[i]
 		if length <= 0.0:
@@ -240,15 +275,15 @@ func _draw_nodes() -> void:
 
 		if i == _selected:
 			# El anillo dice qué nodo va a recibir el próximo gesto.
-			draw_arc(node, radius + SELECTION_GAP, 0.0, TAU, 40, Color(_pulse_color(), 0.85), SELECTION_WIDTH, true)
+			draw_arc(node, radius + SELECTION_GAP, 0.0, TAU, 40, Color(_pulse_color(), _alpha(0.85)), SELECTION_WIDTH, true)
 			if _drag_hint:
 				_draw_drag_arrows(node, radius)
 		if is_origin:
-			draw_circle(node, radius * ORIGIN_HALO, Color(color, 0.14))
+			draw_circle(node, radius * ORIGIN_HALO, Color(color, _alpha(0.14)))
 		if _flash[i] > 0.0:
 			# La onda se aleja y se apaga mientras el bulbo vuelve a su color.
 			var wave := 1.0 - _flash[i]
-			draw_arc(node, radius + wave * WAVE_RADIUS, 0.0, TAU, 32, Color(color, _flash[i] * 0.7), 2.0, true)
+			draw_arc(node, radius + wave * WAVE_RADIUS, 0.0, TAU, 32, Color(color, _alpha(_flash[i] * 0.7)), 2.0, true)
 		draw_circle(node, radius, color)
 
 
@@ -256,7 +291,7 @@ func _draw_nodes() -> void:
 # las hace notar sin tapar la geometría ni el anillo de selección.
 func _draw_drag_arrows(center: Vector2, radius: float) -> void:
 	var alpha := 0.55 + 0.35 * sin(_time * TAU * DRAG_ARROW_PULSE_HZ)
-	var color := Color(_pulse_color(), clampf(alpha, 0.0, 1.0))
+	var color := Color(_pulse_color(), _alpha(clampf(alpha, 0.0, 1.0)))
 	var start_radius := radius + SELECTION_GAP + 3.0
 	var directions: Array[Vector2] = [Vector2.UP, Vector2.DOWN, Vector2.LEFT, Vector2.RIGHT]
 	for direction in directions:
@@ -279,8 +314,8 @@ func _draw_pulse() -> void:
 	var trail_color := _trail_color()
 	for k in range(_trail.size() - 1, 0, -1):
 		var fade := 1.0 - float(k) / float(_trail.size())
-		draw_circle(_trail[k], HEAD_RADIUS * 0.75 * fade, Color(trail_color, fade * fade * 0.6))
-	draw_circle(_head, HEAD_RADIUS * HEAD_HALO, Color(color, 0.16))
+		draw_circle(_trail[k], HEAD_RADIUS * 0.75 * fade, Color(trail_color, _alpha(fade * fade * 0.6)))
+	draw_circle(_head, HEAD_RADIUS * HEAD_HALO * (1.0 + 0.3 * _brightness_glow()), Color(color, _alpha(0.16)))
 	draw_circle(_head, HEAD_RADIUS, color)
 
 
@@ -320,11 +355,11 @@ func _point_on_edge(edge: int, u: float) -> Vector2:
 
 
 func _node_color() -> Color:
-	return Color.from_hsv(_base_hue, 0.45, 0.95)
+	return Color.from_hsv(_base_hue, 0.45, lerpf(0.30, 0.95, _brightness_factor()))
 
 
 func _pulse_color() -> Color:
-	return Color.from_hsv(fposmod(_base_hue + 0.08, 1.0), 0.25, 1.0)
+	return Color.from_hsv(fposmod(_base_hue + 0.08, 1.0), 0.25, lerpf(0.40, 1.0, _brightness_factor()))
 
 
 # Matiz de la familia (DISENO 5.1): las 3 quedan separadas 0,24. La comparten
@@ -345,4 +380,4 @@ static func family_node_color(family: int) -> Color:
 
 # La cola usa el matiz saturado: a baja opacidad el color pálido se ve gris.
 func _trail_color() -> Color:
-	return Color.from_hsv(fposmod(_base_hue + 0.08, 1.0), 0.55, 1.0)
+	return Color.from_hsv(fposmod(_base_hue + 0.08, 1.0), 0.55, lerpf(0.45, 1.0, _brightness_factor()))

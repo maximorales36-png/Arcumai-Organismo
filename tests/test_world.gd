@@ -110,8 +110,9 @@ func _max_organisms_rejects() -> String:
 	return ""
 
 
-# R-33 (nuevo): soltar B2 antes de SPAWN_HOLD_MS no crea nada y, una vez
-# creado un organismo, B2 queda bloqueado durante SPAWN_COOLDOWN_S.
+# R-33 (nuevo): soltar B2 antes de SPAWN_HOLD_MS no crea nada; durante el
+# enfriamiento B2 cambia los nodos del organismo seleccionado en vez de crear
+# otro, y al terminar el enfriamiento arranca la carga.
 func _t23() -> Dictionary:
 	var world := _make_world(400)
 	world.add_organism(Config.N_DEFAULT)
@@ -133,27 +134,33 @@ func _t23() -> Dictionary:
 	if world.count() != 2:
 		return _fail_t23("la carga completa no creó el organismo")
 
-	var rejected := [false]
-	var handler := func() -> void:
-		rejected[0] = true
-	world.rejected.connect(handler)
+	# Durante el enfriamiento B2 no crea nada: cambia los nodos del organismo
+	# que quedó seleccionado.
+	var selected := world.selected_organism()
+	var n_before := selected.model.n
 	world.b2_pressed()
-	world.rejected.disconnect(handler)
-	if not rejected[0]:
-		return _fail_t23("el enfriamiento no rechazó una siembra inmediata")
+	if not world.is_adjusting():
+		return _fail_t23("B2 durante el enfriamiento no entró en modo ajuste")
 	if world.count() != 2:
-		return _fail_t23("el enfriamiento agregó un organismo igual")
+		return _fail_t23("B2 durante el enfriamiento creó un organismo")
+	world.nav_step(Vector2.RIGHT)
+	if world.selected_organism().model.n != n_before + 1:
+		return _fail_t23("el modo ajuste no cambió la cantidad de nodos")
+	world.b2_released()
+	if world.is_adjusting():
+		return _fail_t23("soltar B2 no terminó el modo ajuste")
 
-	world.update(Config.SPAWN_COOLDOWN_S + 0.01)
+	# Si B2 sigue apretado cuando termina el enfriamiento, arranca la carga.
 	world.b2_pressed()
+	world.update(Config.SPAWN_COOLDOWN_S + 0.01)
 	if not world.is_spawn_charging():
-		return _fail_t23("el enfriamiento no terminó a los SPAWN_COOLDOWN_S")
+		return _fail_t23("el enfriamiento no terminó en una carga")
 	world.b2_released()
 
 	return {
 		"id": "T-23 (propuesto)",
 		"ok": true,
-		"detail": "la carga de siembra cancela al soltar y el enfriamiento bloquea B2",
+		"detail": "la carga cancela al soltar y el enfriamiento deja ajustar los nodos",
 	}
 
 

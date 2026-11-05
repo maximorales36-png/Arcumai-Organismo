@@ -19,7 +19,7 @@ ni forma de perder: la pieza cambia con lo que hacés.
   tap); **B2** cambia el timbre; **B3 + arriba/abajo** cambia el brillo; **B4**
   vuelve a Macro.
 - **Macro:** el joystick elige organismos; **B1** entra a uno; **B2 mantenido
-  2 s** siembra uno nuevo (izquierda/derecha elige cuántos nodos); **B3 +
+  1,2 s** siembra uno nuevo (izquierda/derecha elige cuántos nodos); **B3 +
   dirección** crea o quita un puente; **B4 mantenido 0,6 s** disuelve.
 
 Después de 90 s sin tocar nada, vuelve solo al inicio con otra escala.
@@ -57,8 +57,10 @@ puentes ese cambio se propaga a los demás.
 
 Hay dos escalas de cámara:
 
-- **Micro:** zoom al organismo seleccionado, centrado en su forma completa. Los
-  demás quedan fuera de cuadro o al fondo, más bajos y más opacos.
+- **Micro:** zoom al organismo seleccionado, centrado en su forma completa. Si
+  un nodo se arrastra hasta el borde, la cámara se aleja para que el organismo
+  entero siga en cuadro. Los demás quedan fuera de cuadro o al fondo, más bajos
+  y más opacos.
 - **Macro:** se ven todos los organismos flotando, con sus puentes.
 
 La transición entre las dos es un zoom de medio segundo.
@@ -82,8 +84,8 @@ La transición entre las dos es un zoom de medio segundo.
 - **Puentes:** el eco no es una nota nueva del organismo receptor: es el mismo
   nodo receptor sonando un instante después. El eco no dispara otros puentes, así
   que no hay contagio.
-- Hay un click muy bajo que marca el pulso de referencia (100 BPM). Las notas de
-  los organismos van por encima.
+- El metrónomo está silenciado por ahora: el pulso de referencia no se oye, así
+  que solo se escuchan los organismos.
 
 ## Los controles
 
@@ -111,7 +113,8 @@ El joystick no apunta: **navega**. Los botones son verbos fijos:
 |---|---|
 | Joystick | Selecciona el organismo vecino en esa dirección. Mantenerlo repite el paso. |
 | B1 tap | Entra a Micro, con zoom al organismo seleccionado. |
-| B2 mantener 2 s | Un destello crece en el punto donde va a nacer el organismo. Al completarse, el organismo aparece con N=2 y ya suena. Izquierda/derecha cambia su N (2 a 8) en vivo. Soltar confirma. Si se suelta antes de los 2 s, no se crea nada. Después de crear uno hay que esperar 5 s para sembrar otro. |
+| B2 mantener 1,2 s | Un destello crece en el punto donde va a nacer el organismo y abajo al centro aparece el aviso «sembrando». Al completarse, el organismo aparece con N=2 y ya suena. Izquierda/derecha cambia su N (2 a 8) en vivo. Soltar confirma. Si se suelta antes de los 1,2 s, no se crea nada. |
+| B2 durante los 5 s siguientes a una siembra | Todavía no se puede crear otro organismo, pero el joystick sí cambia la cantidad de nodos del que quedó seleccionado. |
 | B4 durante la carga o la siembra | Cancela el gesto y, si el organismo ya apareció, lo elimina. |
 | B3 mantener + cambio de dirección | Crea un puente desde el organismo seleccionado hacia el vecino en esa dirección. Si el puente ya existe, lo quita. |
 | B4 mantener 0,6 s | Disuelve el organismo seleccionado. Aparece el aviso «borrando» abajo al centro, con el color del organismo. Si se suelta antes, se recupera. No se puede disolver el último. |
@@ -135,10 +138,12 @@ organismo. Estas son las palancas disponibles:
    ciclan con B2 en Micro.
 4. **El brillo.** Abre o cierra el filtro del organismo: de opaco y redondo a
    brillante y filoso. Se cambia con B3 + arriba/abajo en Micro y queda fijo.
+   El dibujo acompaña al sonido: bajar el brillo también apaga la luz del
+   organismo.
 5. **El tamaño.** Al sembrar, izquierda/derecha elige N entre 2 y 8. El primer
    organismo de la sesión tiene 4 nodos; los sembrados nacen con 2. Más nodos =
    más pulsos por vuelta, organismo más grande y más grave.
-6. **La cantidad.** Se pueden tener hasta 6 organismos. Cada uno aporta su propia
+6. **La cantidad.** Se pueden tener hasta 5 organismos. Cada uno aporta su propia
    capa rítmica y armónica.
 7. **Las relaciones.** Los puentes hacen que un organismo "responda" a otro. Se
    pueden tener hasta 6 puentes; A→B y B→A pueden coexistir.
@@ -166,9 +171,8 @@ organismo. Estas son las palancas disponibles:
   hace un fundido de 2 s y vuelve al estado inicial, con escala y tónica nuevas.
   La música sigue sonando durante la espera; el reloj no se detiene.
 - **Ningún botón queda sin respuesta:** si una acción es imposible (no hay vecino
-  en esa dirección, ya hay 6 organismos, ya hay 6 puentes, se quiere disolver el
-  último, todavía dura el enfriamiento de 5 s de una siembra), suena un rechazo
-  corto y grave y el elemento seleccionado tiembla.
+  en esa dirección, ya hay 5 organismos, ya hay 6 puentes, se quiere disolver el
+  último), suena un rechazo corto y grave y el elemento seleccionado tiembla.
 
 ## Primeros pasos (para probar)
 
@@ -180,7 +184,7 @@ organismo. Estas son las palancas disponibles:
 4. Apretá B2: cambiá el timbre de ese nodo.
 5. Mantené B3 y mové arriba/abajo: abrí o cerrá el brillo del organismo.
 6. Apretá B4 para volver a Macro. Movete con el joystick entre organismos.
-7. Mantené B2 2 s hasta que el destello complete: aparece un organismo nuevo.
+7. Mantené B2 1,2 s hasta que el destello complete: aparece un organismo nuevo.
    Con izquierda/derecha elegí cuántos nodos tiene; soltá para confirmar.
 8. Mantené B3 y cambiá la dirección del joystick hacia un vecino: creá un puente
    y escuchá el eco.
@@ -188,7 +192,7 @@ organismo. Estas son las palancas disponibles:
 
 ## Límites y detalles
 
-- Hasta **6 organismos**, **6 puentes** y **16 voces simultáneas**.
+- Hasta **5 organismos**, **6 puentes** y **16 voces simultáneas**.
 - Cada organismo tiene entre **2 y 8 nodos**.
 - Un puente va de un organismo A a un organismo B. El emisor es el nodo de A más
   cercano al centro de B; el receptor es el nodo de B más cercano al centro de A.

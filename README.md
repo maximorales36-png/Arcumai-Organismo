@@ -86,7 +86,7 @@ las muestras reales, van en `audio/<familia>/<variante>.wav`.
 
 El Master lleva un limitador (`AudioEffectHardLimiter`, techo −1 dB) definido en
 `default_bus_layout.tres`. Cada voz de organismo suena a `NODE_SAMPLE_DB`
-(−9 dB) para dejar margen: con 6 organismos y puentes la suma de picos puede
+(−9 dB) para dejar margen: con 5 organismos y puentes la suma de picos puede
 superar 0 dBFS. Los buses de organismo siguen la regla de foco de R-36 (0 dB en Macro,
 `FOCUS_OTHERS_DB` para los no enfocados en Micro).
 

@@ -248,6 +248,17 @@ Con B2 mantenido (sembrando), presionar B4 cancela la siembra.
 - Queda pendiente que Maxi actualice `ESPECIFICACION.md`: `MAX_ORGANISMS`, `N_SPAWN`, `SPAWN_HOLD_MS`, `SPAWN_COOLDOWN_S`, `DISSOLVE_HOLD_MS`, R-33/R-34 y T-17; se propone T-23 para la carga y el enfriamiento.
 - Riesgo con 6 organismos y `MIN_ORG_DISTANCE = 350` en `WORLD_SIZE`: la deriva puede quedar trabada si dos organismos ya están más cerca que la distancia mínima. Se evalúa al probar.
 
+**2026-11-05 (segunda tanda de ajustes de Macro y Micro)**
+- El tope de organismos vuelve a 5 (Maxi cambió de idea sobre los 6).
+- La carga de siembra baja de 2 s a 1,2 s: el destello llega antes y el organismo aparece más rápido.
+- Durante el enfriamiento de 5 s, B2 ya no se rechaza: entra en "modo ajuste" y el joystick cambia la cantidad de nodos del organismo seleccionado. Si B2 sigue apretado cuando termina el enfriamiento, la carga arranca sola (si el mundo está lleno, rechaza).
+- La cámara de Micro se aleja cuando el organismo no entra en cuadro: se calcula el radio de la caja de nodos y la escala baja hasta que el organismo completo entre (`MICRO_FIT_MARGIN = 0.8`). El encuadre de siempre no cambia; solo retrocede cuando un nodo se arrastra al borde.
+- El brillo ahora es visual además de sonoro: bajar el parámetro de R-26/R-35 oscurece los nodos y apaga los brillos; subirlo por encima de 0.75 abre el halo. `BRIGHTNESS_DEFAULT` pasa de 0.7 a 0.8.
+- El aviso de abajo al centro ahora tiene dos estados: «borrando» al disolver y «sembrando» mientras se carga o se ajusta el organismo nuevo. Ambos en el color del organismo.
+- El metrónomo queda en −80 dB (inaudible) hasta que Maxi decida si se queda.
+- `main.gd` carga `spawn_view.gd` por `preload` en vez de por `class_name`: así la escena no depende de que el editor haya registrado la clase global del script nuevo.
+- Queda pendiente que Maxi actualice `ESPECIFICACION.md`: `MAX_ORGANISMS` (5), `SPAWN_HOLD_MS` (1200), `BRIGHTNESS_DEFAULT` (0.8) y el texto de R-33 (carga, enfriamiento y modo ajuste).
+
 ## 10. Fuera de alcance v1
 
 - Ciclo elástico (el ciclo dura lo que dicta la geometría).

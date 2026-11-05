@@ -32,6 +32,7 @@ var _spawn_charging := false
 var _spawn_charge := 0.0
 var _spawn_point := Vector2.ZERO
 var _spawn_cooldown := 0.0
+var _adjusting := false
 var _spawning := false
 var _spawn_index := -1
 var _spawn_previous_id := -1
@@ -99,6 +100,12 @@ func spawn_cooldown_left() -> float:
 	return _spawn_cooldown
 
 
+# Modo ajuste: B2 está apretado durante el enfriamiento, así que no crea un
+# organismo nuevo pero sí deja cambiarle los nodos al que quedó seleccionado.
+func is_adjusting() -> bool:
+	return _adjusting
+
+
 # Familia que va a recibir el próximo organismo (R-25): la vista de la carga
 # usa su color para anticipar el destello.
 func next_family() -> int:
@@ -153,14 +160,17 @@ func nav_step(direction: Vector2) -> void:
 	# mover: el joystick se ignora hasta que el destello completa.
 	if _spawn_charging:
 		return
-	if _spawning:
+	if _spawning or _adjusting:
 		var step := 0
 		if direction.x > 0.0:
 			step = 1
 		elif direction.x < 0.0:
 			step = -1
 		if step != 0:
-			_change_spawn_n(step)
+			if _spawning:
+				_change_spawn_n(step)
+			else:
+				_change_selected_n(step)
 		return
 	if _dissolving:
 		return
@@ -176,7 +186,8 @@ func nav_step(direction: Vector2) -> void:
 
 # R-33: B2 mantiene una carga de SPAWN_HOLD_MS; al completarla se crea el
 # organismo y sigue el ajuste de n hasta soltar. Soltar antes no crea nada.
-# Después de una siembra hay un enfriamiento antes de poder sembrar otra.
+# Después de una siembra hay un enfriamiento: durante ese tiempo B2 no crea
+# nada, pero sirve para cambiarle los nodos al organismo seleccionado.
 func b2_pressed() -> void:
 	if _spawn_charging or _spawning:
 		return
@@ -184,22 +195,17 @@ func b2_pressed() -> void:
 		rejected.emit()
 		return
 	if _spawn_cooldown > 0.0:
-		rejected.emit()
+		_adjusting = true
 		return
 	if organisms.size() >= Config.MAX_ORGANISMS:
 		rejected.emit()
 		return
 
-	var previous := selected_organism()
-	_spawn_previous_id = previous.id if previous != null else -1
-	_spawn_charging = true
-	_spawn_charge = 0.0
-	# El punto se fija al empezar la carga para que el destello y el organismo
-	# que aparece después coincidan.
-	_spawn_point = pick_position(_positions(), _rng)
+	_start_charge()
 
 
 func b2_released() -> void:
+	_adjusting = false
 	if _spawn_charging:
 		_cancel_charge()
 	_spawning = false
@@ -215,6 +221,7 @@ func b4_pressed() -> void:
 	if _spawning:
 		_cancel_spawn()
 		return
+	_adjusting = false
 	if _dissolving:
 		return
 	if organisms.size() <= 1:
@@ -247,6 +254,7 @@ func b3_released() -> void:
 # debe seguir armado al volver a Macro (B3 en Micro es otra función).
 func reset_gestures() -> void:
 	_connecting = false
+	_adjusting = false
 
 
 # R-28: B3 mantenido + dirección. El vecino se elige con la misma regla que
@@ -292,9 +300,20 @@ func flush_echoes(tick: int) -> void:
 # decide ningún disparo ni toca el modelo temporal.
 func update(delta: float) -> void:
 	_drift(delta)
+	var started_charge := false
 	if _spawn_cooldown > 0.0:
 		_spawn_cooldown = maxf(0.0, _spawn_cooldown - delta)
-	if _spawn_charging:
+		# Si el enfriamiento terminó con B2 apretado, la carga arranca sola.
+		if _spawn_cooldown <= 0.0 and _adjusting:
+			_adjusting = false
+			if organisms.size() >= Config.MAX_ORGANISMS:
+				rejected.emit()
+			else:
+				_start_charge()
+				started_charge = true
+	# La carga que arranca en este frame no avanza: si no, el delta del
+	# enfriamiento la completaría de un golpe.
+	if _spawn_charging and not started_charge:
 		_advance_charge(delta)
 	if not _dissolving:
 		return
@@ -352,6 +371,16 @@ static func random_world_point(rng: RandomNumberGenerator) -> Vector2:
 	)
 
 
+# Arranca la carga de siembra: se fija el punto de aparición para que el
+# destello y el organismo que aparece después coincidan.
+func _start_charge() -> void:
+	var previous := selected_organism()
+	_spawn_previous_id = previous.id if previous != null else -1
+	_spawn_charging = true
+	_spawn_charge = 0.0
+	_spawn_point = pick_position(_positions(), _rng)
+
+
 # La carga completa crea el organismo en el punto que se venía mostrando y
 # arranca el enfriamiento. La selección pasa al organismo nuevo para que el
 # ajuste de n con izquierda/derecha siga funcionando (R-33).
@@ -374,7 +403,20 @@ func _cancel_charge() -> void:
 
 
 func _change_spawn_n(step: int) -> void:
-	var organism := organisms[_spawn_index]
+	_change_n(organisms[_spawn_index], step)
+
+
+# Durante el enfriamiento B2 cambia los nodos del organismo que está
+# seleccionado, sin crear nada nuevo.
+func _change_selected_n(step: int) -> void:
+	if organisms.is_empty():
+		return
+	_change_n(organisms[selected], step)
+
+
+# Cambiar n regenera la geometría con la misma semilla, recalcula los tiempos y
+# reinicia el ciclo del organismo (R-33).
+func _change_n(organism: OrganismState, step: int) -> void:
 	var new_n := clampi(organism.model.n + step, Config.N_MIN, Config.N_MAX)
 	if new_n == organism.model.n:
 		return

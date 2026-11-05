@@ -11,18 +11,28 @@ const MODE_MICRO := 1
 
 # Los placeholders están numerados 1..3 en el archivo (R-25).
 const SAMPLE_PATH := "res://audio/placeholder/family_%d_%d.wav"
-# Cada voz deja 9 dB de headroom: con 6 organismos y puentes la suma de picos
+
+# El destello de siembra se carga por ruta y no por class_name: así la escena
+# no depende de que el editor haya registrado la clase global del script.
+const SpawnViewScript := preload("res://src/view/spawn_view.gd")
+
+# Cada voz deja 9 dB de headroom: con 5 organismos y puentes la suma de picos
 # puede superar 0 dBFS. El limitador del Master (default_bus_layout.tres) es la
 # red de seguridad; este margen evita que tenga que trabajar de más (V-11).
 const NODE_SAMPLE_DB := -9.0
-# El metrónomo queda bajo para no tapar las notas de los organismos.
-const METRONOME_DB := -28
+# El metrónomo queda silenciado por ahora: a -80 dB no se oye, así no compite
+# con las notas de los organismos.
+const METRONOME_DB := -80
 const REJECT_DB := -18.0
 const REJECT_FREQ_HZ := 110.0
 const REJECT_SEC := 0.09
 
 # Escala aparente de Micro: la misma de M4/M5, para poder juzgar el pulso.
 const MICRO_VIEW_SCALE := 3.0
+# Fracción del medio-pantalla que el organismo puede ocupar antes de que la
+# cámara retroceda. Con 0.8 el encuadre de siempre no cambia y la cámara solo
+# se aleja cuando un nodo se arrastra hasta el borde.
+const MICRO_FIT_MARGIN := 0.8
 # MACRO_ORG_SCALE (0.3) es la escala de dibujo de la especificación. Este
 # multiplicador cosmético mantiene legibles los nodos en la ventana de
 # desarrollo 1280x720; la calibración final depende de la resolución del
@@ -42,7 +52,7 @@ const MACRO_DEBUG_SCALE := 3.0
 @onready var _world_layer: Node2D = $WorldLayer
 @onready var _voices: VoicePool = $VoicePool
 @onready var _fade: ColorRect = $Fade
-@onready var _deleting_label: Label = $DeletingLabel
+@onready var _status_label: Label = $StatusLabel
 
 var _clock := Clock.new()
 var _router := InputRouter.new()
@@ -53,6 +63,10 @@ var _mode := MODE_MICRO
 # en el acto para que los botones respondan sin esperar la animación.
 var _zoom := 1.0
 var _zoom_target := 1.0
+# Escala de cámara de Micro: la normal y la que hace falta para que el
+# organismo entero entre en cuadro.
+var _micro_zoom := MICRO_VIEW_SCALE / (Config.MACRO_ORG_SCALE * MACRO_DEBUG_SCALE)
+var _micro_zoom_target := _micro_zoom
 var _samples: Array[AudioStream] = []
 var _reject_stream: AudioStream
 var _scale: Array = []
@@ -61,7 +75,7 @@ var _stick := Vector2.ZERO
 var _views: Dictionary = {}
 var _buses: Dictionary = {}
 var _bridges_view: BridgesView
-var _spawn_view: SpawnView
+var _spawn_view: SpawnViewScript
 
 
 func _ready() -> void:
@@ -76,7 +90,7 @@ func _ready() -> void:
 
 	# El destello de siembra y los puentes se dibujan detrás de los organismos:
 	# se agregan antes que las vistas de organismo y se reusan en cada sesión.
-	_spawn_view = SpawnView.new()
+	_spawn_view = SpawnViewScript.new()
 	_world_layer.add_child(_spawn_view)
 	_bridges_view = BridgesView.new()
 	_world_layer.add_child(_bridges_view)
@@ -124,6 +138,8 @@ func _start_session() -> void:
 	_mode = MODE_MICRO
 	_zoom = 1.0
 	_zoom_target = 1.0
+	_micro_zoom = _base_micro_zoom()
+	_micro_zoom_target = _micro_zoom
 	_action_label.text = "última acción: (ninguna)"
 	_note_label.text = "última nota: (ninguna)"
 	_world.add_organism(Config.N_DEFAULT)
@@ -349,6 +365,7 @@ func _exit_micro() -> void:
 func _on_organism_added(organism: OrganismState) -> void:
 	var view := OrganismView.new()
 	view.setup(organism.model, organism.family)
+	view.set_brightness(organism.session.brightness())
 	_world_layer.add_child(view)
 	_views[organism.id] = view
 
@@ -444,6 +461,11 @@ func _on_node_brightness_changed(brightness: float) -> void:
 	var bus: OrganismBus = _buses.get(organism.id)
 	if bus != null:
 		bus.set_brightness(brightness)
+	# El mismo parámetro que abre el filtro también aclara u oscurece el
+	# dibujo del organismo (R-26/R-35).
+	var view: OrganismView = _views.get(organism.id)
+	if view != null:
+		view.set_brightness(brightness)
 	_update_labels()
 
 
@@ -469,6 +491,33 @@ func _reject(organism: OrganismState) -> void:
 # vista; ningún disparo depende de esto.
 func _update_zoom(delta: float) -> void:
 	_zoom = move_toward(_zoom, _zoom_target, delta / Config.ZOOM_TIME_S)
+	_micro_zoom_target = _target_micro_zoom()
+	_micro_zoom = move_toward(_micro_zoom, _micro_zoom_target, delta / Config.ZOOM_TIME_S)
+
+
+# Escala de cámara normal de Micro: la que hace ver el organismo al tamaño de
+# siempre.
+func _base_micro_zoom() -> float:
+	return MICRO_VIEW_SCALE / (Config.MACRO_ORG_SCALE * MACRO_DEBUG_SCALE)
+
+
+# La cámara de Micro se aleja si el organismo no entra en cuadro: cuando un
+# nodo se arrastra al borde, el centro visual se corre y con él la cámara.
+func _target_micro_zoom() -> float:
+	var base := _base_micro_zoom()
+	var selected := _world.selected_organism()
+	if selected == null:
+		return base
+	var center := selected.model.visual_center()
+	var extent := 0.0
+	for node in selected.model.nodes:
+		extent = maxf(extent, node.distance_to(center))
+	if extent <= 0.0:
+		return base
+	var size := get_viewport_rect().size
+	var limit := minf(size.x, size.y) * 0.5 * MICRO_FIT_MARGIN
+	var view_scale := Config.MACRO_ORG_SCALE * MACRO_DEBUG_SCALE
+	return minf(base, limit / (extent * view_scale))
 
 
 # R-36: el foco se funde en FOCUS_FADE_S. Se actualiza por frame porque la
@@ -496,7 +545,6 @@ func _layout_views() -> void:
 	var size := get_viewport_rect().size
 	var fit := minf(size.x / Config.WORLD_SIZE.x, size.y / Config.WORLD_SIZE.y)
 	var view_scale := Config.MACRO_ORG_SCALE * MACRO_DEBUG_SCALE
-	var micro_zoom := MICRO_VIEW_SCALE / view_scale
 	var t := _smoothstep(_zoom)
 	var selected := _world.selected_organism()
 	var center := Config.WORLD_SIZE * 0.5
@@ -505,7 +553,7 @@ func _layout_views() -> void:
 		# si un nodo se arrastra lejos, el organismo entero sigue encuadrado.
 		var focus_point := selected.position + selected.model.visual_center() * view_scale
 		center = center.lerp(focus_point, t)
-	var camera_scale := lerpf(fit, micro_zoom, t)
+	var camera_scale := lerpf(fit, _micro_zoom, t)
 	_world_layer.scale = Vector2(camera_scale, camera_scale)
 	_world_layer.position = size * 0.5 - center * camera_scale
 
@@ -543,19 +591,35 @@ func _update_fades() -> void:
 		if _mode == MODE_MACRO and _world.is_dissolving() and organism == _world.selected_organism():
 			target = 1.0 - 0.85 * _world.dissolve_progress()
 		view.set_fade_target(target)
-	_update_deleting_label()
+	_update_status_label()
 
 
-# R-34: mientras se mantiene B4 en Macro, el aviso "borrando" aparece abajo al
-# centro con el color del organismo y se intensifica con el progreso.
-func _update_deleting_label() -> void:
+# R-33/R-34: el aviso de abajo al centro dice qué está pasando: "borrando"
+# mientras se disuelve y "sembrando" mientras se carga o se ajusta el
+# organismo nuevo. Va con el color del organismo y se intensifica con el
+# progreso del gesto.
+func _update_status_label() -> void:
 	var organism := _world.selected_organism()
-	var deleting := _mode == MODE_MACRO and _world.is_dissolving() and organism != null
-	_deleting_label.visible = deleting
-	if not deleting:
+	var text := ""
+	var color := Color.WHITE
+	var progress := 0.0
+	if _mode == MODE_MACRO and _world.is_dissolving() and organism != null:
+		text = "borrando"
+		color = OrganismView.family_node_color(organism.family)
+		progress = _world.dissolve_progress()
+	elif _mode == MODE_MACRO and (_world.is_spawn_charging() or _world.is_spawning()):
+		text = "sembrando"
+		if _world.is_spawning() and organism != null:
+			color = OrganismView.family_node_color(organism.family)
+		else:
+			color = OrganismView.family_node_color(_world.next_family())
+		progress = _world.spawn_charge_progress()
+	_status_label.visible = text != ""
+	if text == "":
 		return
-	_deleting_label.add_theme_color_override("font_color", OrganismView.family_node_color(organism.family))
-	_deleting_label.modulate.a = 0.55 + 0.45 * _world.dissolve_progress()
+	_status_label.text = text
+	_status_label.add_theme_color_override("font_color", color)
+	_status_label.modulate.a = 0.55 + 0.45 * progress
 
 
 func _update_labels() -> void:
