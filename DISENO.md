@@ -228,6 +228,7 @@ Con B2 mantenido (sembrando), presionar B4 cancela la siembra.
 - Revisión de rechazos: B2 durante una disolución ahora rechaza (antes quedaba en silencio). El resto de las acciones imposibles ya respondían por R-31.
 - El preset de export excluye `tests/`, `tools/` y `build/`. Se generó `build/linux/cultivo.x86_64` + `cultivo.pck` con Godot 4.7.2 en Windows; queda probarlo en Fedora y con el input real del arcumai.
 - Se actualizó `ESPECIFICACION.md` R-30 y T-16 a la regla "más cercano dentro del cono", como pidió Maxi.
+- R-37 quedó cubierto por **T-22** en `ESPECIFICACION.md` (aprobado por Maxi); el test se llama `test_session_reset.gd`.
 
 ## 10. Fuera de alcance v1
 

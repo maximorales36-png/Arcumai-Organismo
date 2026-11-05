@@ -1,4 +1,4 @@
-# Test del reinicio por inactividad (R-37): M9-reset.
+# Test del reinicio por inactividad (R-37): T-22.
 # Comprueba el umbral de INACTIVITY_RESET_S, el fundido de 2 s, el aviso
 # `reset_due` en el punto negro, la cancelación por entrada y el reinicio de la
 # cuenta después de un reset. Es una máquina de estados pura: no hay escena.
@@ -10,10 +10,10 @@ var _resets := 0
 
 
 func run() -> Array[Dictionary]:
-	return [_m9_reset()]
+	return [_t22()]
 
 
-func _m9_reset() -> Dictionary:
+func _t22() -> Dictionary:
 	var problem := _threshold()
 	if problem != "":
 		return _fail(problem)
@@ -29,7 +29,7 @@ func _m9_reset() -> Dictionary:
 	problem = _restarts_after_reset()
 	if problem != "":
 		return _fail(problem)
-	return _ok("M9-reset", "R-37: umbral, fundido de 2 s, cancelación por entrada y reinicio de la cuenta")
+	return _ok("T-22", "R-37: umbral, fundido de 2 s, cancelación por entrada y reinicio de la cuenta")
 
 
 # Antes del umbral no pasa nada; al llegar, arranca el fundido.
@@ -139,4 +139,4 @@ func _ok(test_id: String, detail: String) -> Dictionary:
 
 
 func _fail(detail: String) -> Dictionary:
-	return {"id": "M9-reset", "ok": false, "detail": detail}
+	return {"id": "T-22", "ok": false, "detail": detail}

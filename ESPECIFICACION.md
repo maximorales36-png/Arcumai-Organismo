@@ -152,6 +152,7 @@ Se ejecutan con `godot --headless --script res://tests/run_tests.gd`. Semilla fi
 | T-18 | R-22 | El arrastre nunca saca un nodo del radio ni lo acerca a otro por debajo de `MIN_NODE_DIST` |
 | T-19 | R-21 | La posición derivada del pulso coincide con `S`, `t` y `phi` en todo el ciclo, incluida la fracción de tick |
 | T-20 | R-13/R-20 | Geometría inicial: respeta `MIN_NODE_DIST` y `R_MAX(n)`, no es polígono regular, es determinista con la misma semilla y todas las `L_i` son > 0 |
+| T-22 | R-37 | Reinicio por inactividad: umbral de `INACTIVITY_RESET_S`, fundido de 2 s con el reset en el punto negro, cancelación por entrada y reinicio de la cuenta |
 
 ## 8. Verificaciones manuales
 
