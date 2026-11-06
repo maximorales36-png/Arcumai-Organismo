@@ -24,13 +24,14 @@ godot --path .
 ```
 
 La escena `src/view/main.tscn` es la de la instalación: arranca en Micro con un
-organismo (N=4, familia 0) ya sonando, sin puentes. Cada sesión sortea escala y
-tónica. B1/B4 alternan entre Micro y Macro; la cámara hace un zoom de 0,5 s y la
-mezcla por foco acompaña. Tras `INACTIVITY_RESET_S` (90 s) sin ninguna entrada,
-un fundido de 2 s vuelve al estado inicial con escala y tónica nuevas; el reloj
-no se detiene. El overlay de depuración (tick, beat, escala, modo, organismos,
-puentes, selección, variante, brillo, última acción, última nota y FPS) solo se
-muestra en builds de desarrollo, no en el export.
+organismo (N=4, familia 0) ya sonando, sin puentes. La escala es siempre la
+pentatónica menor y cada sesión sortea la tónica. B1/B4 alternan entre Micro y
+Macro; la cámara hace un zoom de 0,5 s y la mezcla por foco acompaña. Tras
+`INACTIVITY_RESET_S` (90 s) sin ninguna entrada, un fundido de 2 s vuelve al
+estado inicial con una tónica nueva; el reloj no se detiene. El overlay de
+depuración (tick, beat, escala, modo, organismos, puentes, selección, variante,
+brillo, última acción, última nota y FPS) solo se muestra en builds de
+desarrollo, no en el export.
 
 ### Puentes
 
@@ -72,8 +73,8 @@ mapeo de ejes y botones se ajusta cuando se pruebe en el hardware.
 ## Placeholders de audio
 
 Las muestras definitivas todavía no existen (R-25). Los placeholders de las 3
-familias × 3 variantes se generan por script y se versionan en
-`audio/placeholder/`:
+familias × 4 variantes (nota, cross-stick, bombo y silencio) se generan por
+script y se versionan en `audio/placeholder/`:
 
 ```powershell
 godot --headless --path . --script res://tools/generate_placeholders.gd

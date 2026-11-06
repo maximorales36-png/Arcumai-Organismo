@@ -48,7 +48,13 @@ const BRIDGE_DELAY_TICKS := 2
 const VOICE_CAP := 16
 const SAMPLE_ROOT_MIDI := 60
 const FAMILY_COUNT := 3
-const VARIANT_COUNT := 3
+# Variantes por familia (R-25): B2 en Micro cicla entre estos cuatro estados.
+# La 0 conserva la nota afinada de la familia; la 3 mutea el nodo.
+const VARIANT_COUNT := 4
+const VARIANT_PITCHED := 0
+const VARIANT_CROSS_STICK := 1
+const VARIANT_KICK := 2
+const VARIANT_SILENCE := 3
 const FOCUS_OTHERS_DB := -9.0
 const FOCUS_OTHERS_LPF_HZ := 1200.0
 const FOCUS_FADE_S := 0.4
@@ -67,12 +73,11 @@ const ZOOM_TIME_S := 0.5
 const BRIGHTNESS_DEFAULT := 0.8
 const BRIGHTNESS_SPEED := 0.8
 
-# Escalas en semitonos desde la tónica, en el orden del sorteo de R-24.
-const SCALES := [
-	[0, 3, 5, 7, 10],
-	[0, 2, 4, 7, 9],
-	[0, 2, 3, 5, 7, 9, 10],
-]
+# Escala única de la instalación (R-24): todas las notas de todos los
+# organismos salen de acá. La tónica se sortea por sesión para que cada
+# función tenga otra altura, pero el modo es siempre el mismo.
+const SCALE := [0, 3, 5, 7, 10]
+const SCALE_NAME := "pentatónica menor"
 
 # Único listado de acciones de input: la escena de depuración y el router
 # leen de acá para no repetir strings.
@@ -106,3 +111,18 @@ static func base_midi(n: int) -> int:
 # R-26: el brillo mueve el corte del pasabajos entre 800 Hz y 16 kHz.
 static func cutoff_hz(brightness: float) -> float:
 	return 800.0 * pow(20.0, clampf(brightness, 0.0, 1.0))
+
+
+# Nombre de la variante para el overlay de desarrollo y el instructivo.
+static func variant_name(variant: int) -> String:
+	match variant:
+		VARIANT_PITCHED:
+			return "nota"
+		VARIANT_CROSS_STICK:
+			return "cross-stick"
+		VARIANT_KICK:
+			return "bombo"
+		VARIANT_SILENCE:
+			return "silencio"
+		_:
+			return "?"

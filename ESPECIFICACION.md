@@ -17,6 +17,7 @@ Valores iniciales. Los marcados *ajustable* se afinan a oído o a ojo, sin tocar
 | `TICKS_PER_BEAT` | 4 | un tick = una semicorchea |
 | `TICK_SEC` | `60 / (BPM * TICKS_PER_BEAT)` | derivada (0,15 s con los valores iniciales) |
 | `N_MIN` / `N_MAX` / `N_DEFAULT` | 2 / 8 / 4 | |
+| `N_SPAWN` | 2 | nodos con los que nace un organismo sembrado con B2 |
 | `MIN_EDGE_TICKS` | 1 | ticks mínimos por hifa |
 | `MIN_NODE_DIST` | 18 | unidades locales; distancia mínima entre nodos |
 | `R_MAX(n)` | `100 + 15 * (n - 2)` | radio máximo del organismo, unidades locales |
@@ -24,31 +25,34 @@ Valores iniciales. Los marcados *ajustable* se afinan a oído o a ojo, sin tocar
 | `MAX_BRIDGES` | 6 | ajustable |
 | `BRIDGE_DELAY_TICKS` | 2 | ajustable |
 | `VOICE_CAP` | 16 | ajustable |
+| `FAMILY_COUNT` / `VARIANT_COUNT` | 3 / 4 | familias de sonido y variantes por familia |
+| `VARIANT_PITCHED` / `VARIANT_CROSS_STICK` / `VARIANT_KICK` / `VARIANT_SILENCE` | 0 / 1 / 2 / 3 | variantes de un nodo (R-25) |
 | `PITCH_SPAN_DEGREES` | 8 | grados de escala por organismo |
 | `BASE_MIDI(n)` | `round(lerp(60, 36, (n - 2) / 6))` | registro por N; más pulsos = más grave |
-| `SAMPLE_ROOT_MIDI` | 60 | las muestras están grabadas en C4 |
+| `SAMPLE_ROOT_MIDI` | 60 | la variante `nota` está grabada en C4 |
 | `DRAG_SPEED` | 180 | unidades/s a joystick completo |
 | `NAV_REPEAT_FIRST_MS` / `NAV_REPEAT_MS` | 350 / 200 | auto-repetición de selección |
-| `DISSOLVE_HOLD_MS` | 1000 | |
+| `DISSOLVE_HOLD_MS` | 600 | |
+| `SPAWN_HOLD_MS` | 1200 | carga de B2 para sembrar |
+| `SPAWN_COOLDOWN_S` | 5 | espera entre siembras |
 | `INACTIVITY_RESET_S` | 90 | |
 | `ZOOM_TIME_S` | 0.5 | |
 | `FOCUS_OTHERS_DB` | -9 | otros organismos en Micro |
 | `FOCUS_OTHERS_LPF_HZ` | 1200 | idem |
 | `FOCUS_FADE_S` | 0.4 | |
-| `BRIGHTNESS_DEFAULT` | 0.7 | rango 0 a 1 |
+| `BRIGHTNESS_DEFAULT` | 0.8 | rango 0 a 1 |
 | `BRIGHTNESS_SPEED` | 0.8 | por segundo con joystick a fondo |
 | `WORLD_SIZE` | (2400, 1350) | unidades de mundo |
 | `MIN_ORG_DISTANCE` | 350 | separación mínima entre organismos |
 | `DRIFT_MAX_SPEED` | 6 | unidades de mundo/s |
 | `MACRO_ORG_SCALE` | 0.3 | escala de dibujo en Macro |
 
-Escalas (semitonos desde la tónica):
+Escala única (semitonos desde la tónica). Todas las notas de todos los
+organismos salen de acá; la tónica se sortea por sesión:
 
 | Escala | Notas |
 |---|---|
 | Pentatónica menor | 0, 3, 5, 7, 10 |
-| Pentatónica mayor | 0, 2, 4, 7, 9 |
-| Dórica | 0, 2, 3, 5, 7, 9, 10 |
 
 ## 2. Reloj maestro
 
@@ -99,9 +103,9 @@ Clase `OrganismModel` (`RefCounted`). No conoce nodos de escena ni sonido: emite
 ## 4. Sonido
 
 - **R-23** **Altura.** `h = clamp(-(y_local / R_MAX(n)), -1, 1)` (arriba = positivo). `grado = round((h + 1) / 2 * (PITCH_SPAN_DEGREES - 1))`. `semitonos(grado) = 12 * (grado div len(escala)) + escala[grado mod len(escala)]`. `midi = BASE_MIDI(n) + tónica + semitonos(grado)`. `pitch_scale = 2 ^ ((midi - SAMPLE_ROOT_MIDI) / 12)`.
-- **R-24** **Escala y tónica.** Se sortean al iniciar la sesión (escala entre las 3 de la tabla; tónica entera entre 0 y 11) y no cambian durante la sesión.
-- **R-25** **Familias.** 3 familias con 3 variantes cada una, en `res://audio/<familia>/<variante>.wav`, grabadas en C4. Un organismo nuevo recibe la familia siguiente en rotación; cada nodo tiene una variante (empieza en la 0). Hasta que Maxi aporte las muestras, el agente genera placeholders sintetizados (seno o pluck simple con envolvente corta) por script y los guarda en `res://audio/placeholder/`.
-- **R-26** **Brillo.** Cada organismo tiene `brillo` (0 a 1, `BRIGHTNESS_DEFAULT`). Su bus de audio lleva un filtro pasabajos con `cutoff_hz = 800 * 20 ^ brillo` (800 Hz a 16 kHz). El brillo no se resetea al cambiar de vista.
+- **R-24** **Escala y tónica.** La escala es siempre la pentatónica menor (0, 3, 5, 7, 10). La tónica se sortea entera entre 0 y 11 al iniciar la sesión y no cambia durante la sesión.
+- **R-25** **Familias y variantes.** 3 familias con 4 variantes cada una, en `res://audio/<familia>/<variante>.wav`; la variante `nota` está grabada en C4. Un organismo nuevo recibe la familia siguiente en rotación; cada nodo tiene una variante (empieza en `VARIANT_PITCHED`). B2 en Micro cicla la variante del nodo seleccionado en el orden `nota → cross-stick → bombo → silencio`. La variante `nota` se afina con R-23; `cross-stick` y `bombo` suenan a altura fija; `silencio` no gasta voz y solo deja el flash visual. Hasta que Maxi aporte las muestras, el agente genera placeholders sintetizados por script y los guarda en `res://audio/placeholder/`.
+- **R-26** **Brillo.** Cada organismo tiene `brillo` (0 a 1, `BRIGHTNESS_DEFAULT`). Su bus de audio lleva un filtro pasabajos con `cutoff_hz = 800 * 20 ^ brillo` (800 Hz a 16 kHz). El brillo no se resetea al cambiar de vista. El mismo valor se usa en la vista: bajarlo apaga el dibujo del organismo y subirlo por encima de 0.75 abre el halo.
 - **R-29** **Voces.** Un pool de `VOICE_CAP` reproductores. Si todos están ocupados, se roba la voz más antigua. Cada disparo (nodo o eco) usa una voz.
 
 ## 5. Puentes
@@ -119,8 +123,8 @@ Clase `OrganismModel` (`RefCounted`). No conoce nodos de escena ni sonido: emite
 - **R-30** **Joystick digital, selección por vecindad.** Se lee como vector de 8 direcciones. Cada empuje mueve la selección al candidato **más cercano** cuyo ángulo respecto del joystick no supere los 60°; a igual distancia gana el de menor ángulo. Si no hay candidato, se aplica el rechazo (R-31). Mantener el joystick repite el paso: primera repetición a `NAV_REPEAT_FIRST_MS`, siguientes cada `NAV_REPEAT_MS`. La regla vale para nodos (Micro) y organismos (Macro).
 - **R-31** **Rechazo.** Toda acción imposible (sin vecino, tope de organismos, tope de puentes, disolver el último organismo) produce una respuesta de rechazo: un sonido corto, grave y bajo (≈ -18 dB) y un temblor visual de 150 ms sobre el elemento seleccionado. Ningún botón puede quedar sin respuesta.
 - **R-32** **Gestos con B1 en Micro.** Se decide al soltar B1: si durante la pulsación el joystick se movió, fue arrastre (R-22) y no cambia el origen; si no se movió, es un tap y el nodo seleccionado pasa a ser origen (R-19). No hay umbral de tiempo.
-- **R-33** **Siembra (Macro, B2).** Al apretar B2 se crea un organismo con `N_DEFAULT` y ya suena (sin esperar a soltar). Joystick izquierda/derecha cambia `n` en pasos de 1 (recortado a `[N_MIN, N_MAX]`), regenerando la geometría con la misma semilla para que el cambio sea fluido; soltar B2 confirma; B4 durante la pulsación cancela y elimina el organismo. Al cambiar `n` se recalculan `C`, `t` y `S`, el ancla se recalcula como en R-17 (próximo múltiplo de `TICKS_PER_BEAT` estrictamente posterior al tick actual) y se reinician los `fired`. Posición: entre 20 candidatas al azar dentro del mundo, la que maximiza la distancia mínima a los organismos existentes. Si ya hay `MAX_ORGANISMS`, rechazo.
-- **R-34** **Disolver (Macro, B4).** Al apretar B4, el organismo seleccionado empieza a desvanecerse; si se mantiene `DISSOLVE_HOLD_MS`, se elimina; si se suelta antes, se recupera con animación. No se puede disolver el último.
+- **R-33** **Siembra (Macro, B2).** Al apretar B2 empieza una carga de `SPAWN_HOLD_MS` con un destello que crece en el punto de aparición y el aviso «sembrando» abajo al centro. Al completarse se crea un organismo con `N_SPAWN` y ya suena; mientras B2 siga apretado, joystick izquierda/derecha cambia `n` en pasos de 1 (recortado a `[N_MIN, N_MAX]`), regenerando la geometría con la misma semilla para que el cambio sea fluido; soltar B2 confirma. Si se suelta antes de completar la carga, no se crea nada. B4 durante la carga o la siembra cancela y, si el organismo ya apareció, lo elimina. Al cambiar `n` se recalculan `C`, `t` y `S`, el ancla se recalcula como en R-17 (próximo múltiplo de `TICKS_PER_BEAT` estrictamente posterior al tick actual) y se reinician los `fired`. Posición: entre 20 candidatas al azar dentro del mundo, la que maximiza la distancia mínima a los organismos existentes. Después de crear un organismo, B2 no puede sembrar otro durante `SPAWN_COOLDOWN_S`; durante ese enfriamiento B2 entra en modo ajuste y el joystick izquierda/derecha cambia `n` del organismo seleccionado. Si B2 sigue apretado al terminar el enfriamiento, la carga arranca sola. Si ya hay `MAX_ORGANISMS`, rechazo.
+- **R-34** **Disolver (Macro, B4).** Al apretar B4, el organismo seleccionado empieza a desvanecerse; si se mantiene `DISSOLVE_HOLD_MS`, se elimina; si se suelta antes, se recupera con animación. No se puede disolver el último. Mientras se mantiene B4, la vista muestra «borrando» abajo al centro con el color del organismo.
 - **R-35** **Brillo (Micro, B3 mantenido).** Joystick arriba/abajo ajusta `brillo` a `BRIGHTNESS_SPEED` por segundo, recortado a `[0, 1]`.
 - **R-36** **Mezcla por foco.** Cada organismo tiene su propio bus de audio. En Micro: el organismo enfocado en 0 dB y con su `cutoff` propio; los demás en `FOCUS_OTHERS_DB` y con el `cutoff` menor entre el propio y `FOCUS_OTHERS_LPF_HZ`. En Macro: todos en 0 dB y con su `cutoff` propio. Las transiciones duran `FOCUS_FADE_S`.
 - **R-37** **Reinicio por inactividad.** Si pasan `INACTIVITY_RESET_S` sin ninguna entrada, fundido de 2 s y vuelta al estado inicial: un organismo (`N_DEFAULT`, familia 0) en Micro, sin puentes, con escala y tónica sorteadas de nuevo. El reloj no se detiene.
@@ -144,15 +148,17 @@ Se ejecutan con `godot --headless --script res://tests/run_tests.gd`. Semilla fi
 | T-10 | R-19 | `set_origin` conserva el multiconjunto de diferencias entre disparos consecutivos del ciclo (es una rotación) y el período `C` |
 | T-11 | R-27 | Un disparo no-eco de `s` produce exactamente un eco en `d` a `T + BRIDGE_DELAY_TICKS`; el eco no encola otros ecos |
 | T-12 | R-27/R-28 | Disolver un organismo descarta ecos pendientes sin error; los topes (`MAX_BRIDGES`, `MAX_ORGANISMS`) se respetan |
-| T-13 | R-23 | Para todo `n`, escala y tónica: `midi` dentro de `[24, 96]`; las notas pertenecen a la escala; el grado es monótono no decreciente respecto de la altura del nodo |
+| T-13 | R-23 | Para todo `n` y tónica: `midi` dentro de `[24, 96]`; las notas pertenecen a la escala única; el grado es monótono no decreciente respecto de la altura del nodo |
 | T-14 | R-29 | Nunca hay más de `VOICE_CAP` voces activas; el robo toma la más antigua |
 | T-15 | R-02 | Con deltas irregulares (incluido uno de varios ticks), el total de ticks emitidos `== floor(tiempo_total / TICK_SEC)` y llegan en orden |
 | T-16 | R-30 | Selección por vecindad: casos con 0, 1 y varios candidatos, límite de 60°, gana el más cercano y todos alcanzables |
-| T-17 | R-33 | Siembra: `n` recortado a `[2, 8]`; la posición elegida respeta `MIN_ORG_DISTANCE` cuando hay lugar |
+| T-17 | R-33 | Siembra: `n` recortado a `[2, 8]`; la posición elegida respeta `MIN_ORG_DISTANCE` cuando hay lugar; se crea con `N_SPAWN` al completar `SPAWN_HOLD_MS` |
 | T-18 | R-22 | El arrastre nunca saca un nodo del radio ni lo acerca a otro por debajo de `MIN_NODE_DIST` |
 | T-19 | R-21 | La posición derivada del pulso coincide con `S`, `t` y `phi` en todo el ciclo, incluida la fracción de tick |
 | T-20 | R-13/R-20 | Geometría inicial: respeta `MIN_NODE_DIST` y `R_MAX(n)`, no es polígono regular, es determinista con la misma semilla y todas las `L_i` son > 0 |
 | T-22 | R-37 | Reinicio por inactividad: umbral de `INACTIVITY_RESET_S`, fundido de 2 s con el reset en el punto negro, cancelación por entrada y reinicio de la cuenta |
+| T-23 | R-33 | Carga de siembra: soltar antes de `SPAWN_HOLD_MS` cancela; durante `SPAWN_COOLDOWN_S` B2 ajusta `n` en vez de crear; al terminar el enfriamiento con B2 apretado arranca la carga |
+| T-24 | R-25 | B2 en Micro recorre nota, cross-stick, bombo y silencio; el silencio es una variante válida |
 
 ## 8. Verificaciones manuales
 
@@ -162,7 +168,7 @@ Se ejecutan con `godot --headless --script res://tests/run_tests.gd`. Semilla fi
 | V-02 | `[OJO]` | Los organismos no se leen como polígonos regulares; se lee cuántos nodos tiene cada uno |
 | V-03 | `[OJO]` | La transición Macro/Micro no marea ni desorienta; se entiende qué organismo se enfoca |
 | V-04 | `[OÍDO]` | Metrónomo/ciclos estables durante 3 minutos, sin deriva audible (R-03) |
-| V-05 | `[OÍDO]` | Las 3 escalas suenan consonantes con cualquier combinación de notas |
+| V-05 | `[OÍDO]` | La escala única (pentatónica menor) suena consonante con cualquier combinación de notas |
 | V-06 | `[OÍDO]` | El registro por N separa bien las capas; N=2 no resulta chillón ni N=8 embarrado |
 | V-07 | `[OÍDO]` | Arrastrar un nodo cambia el ritmo interno de forma perceptible y agradable, sin saltos molestos |
 | V-08 | `[OÍDO]` | El cambio de origen inmediato (R-19) se siente bien |

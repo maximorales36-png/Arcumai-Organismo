@@ -115,14 +115,13 @@ func _ready() -> void:
 func _start_session() -> void:
 	_dispose_world()
 
-	# Cada sesión sortea de nuevo escala y tónica (R-24, R-37). La semilla sale
-	# del reloj del sistema: el juego no debe repetir la misma pieza siempre.
+	# La escala es siempre la misma (R-24); solo se sortea la tónica para que
+	# cada sesión tenga otra altura. La semilla sale del reloj del sistema.
 	var rng := RandomNumberGenerator.new()
 	rng.seed = Time.get_ticks_usec()
-	var scale_index := rng.randi_range(0, Config.SCALES.size() - 1)
-	_scale = Config.SCALES[scale_index]
+	_scale = Config.SCALE
 	_tonic = rng.randi_range(0, 11)
-	_scale_label.text = "escala: %d   tónica: %d" % [scale_index + 1, _tonic]
+	_scale_label.text = "escala: %s   tónica: %d" % [Config.SCALE_NAME, _tonic]
 
 	_world = World.new(rng)
 	# El mundo nuevo necesita el tick actual para anclar bien el organismo.
@@ -234,15 +233,25 @@ func _on_node_fired(organism_id: int, node_index: int, tick: int, is_echo: bool)
 
 
 # Cada nodo suena con su variante y en el bus de su organismo (R-25, R-26).
+# La variante 3 es silencio: el nodo sigue pulsando en pantalla pero no gasta
+# voz. Las percusiones (cross-stick y bombo) no se transponen: suenan siempre
+# igual, porque no representan una altura de la escala.
 func _play_node(organism: OrganismState, node_index: int) -> void:
-	var midi := PitchMapping.midi_for_node(organism.model.nodes[node_index].y, organism.model.n, _scale, _tonic)
-	var pitch := PitchMapping.pitch_scale_for_midi(midi)
 	var variant := organism.session.variant_of(node_index)
+	if variant == Config.VARIANT_SILENCE:
+		_note_label.text = "última nota: silencio"
+		return
+	var pitch := 1.0
+	if variant == Config.VARIANT_PITCHED:
+		var midi := PitchMapping.midi_for_node(organism.model.nodes[node_index].y, organism.model.n, _scale, _tonic)
+		pitch = PitchMapping.pitch_scale_for_midi(midi)
+		_note_label.text = "última nota: midi %d   pitch %.2f" % [midi, pitch]
+	else:
+		_note_label.text = "última nota: %s" % Config.variant_name(variant)
 	var sample := _samples[organism.family * Config.VARIANT_COUNT + variant]
 	var bus: OrganismBus = _buses.get(organism.id)
 	var bus_name := bus.bus_name() if bus != null else "Master"
 	_voices.play(sample, pitch, NODE_SAMPLE_DB, bus_name)
-	_note_label.text = "última nota: midi %d   pitch %.2f" % [midi, pitch]
 
 
 func _on_nav_step(direction: Vector2) -> void:
@@ -645,9 +654,9 @@ func _update_labels() -> void:
 		organism.model.n,
 		organism.family + 1,
 	]
-	_session_label.text = "nodo: %d   variante: %d   brillo: %.2f" % [
+	_session_label.text = "nodo: %d   variante: %s   brillo: %.2f" % [
 		organism.session.selected,
-		organism.session.variant_of(organism.session.selected),
+		Config.variant_name(organism.session.variant_of(organism.session.selected)),
 		organism.session.brightness(),
 	]
 

@@ -1,4 +1,4 @@
-# Test de la siembra en Macro (R-33): T-17 y T-23 (propuesto).
+# Test de la siembra en Macro (R-33): T-17 y T-23.
 # Verifica que n se recorta a [N_MIN, N_MAX] al cambiarlo en vivo, que la
 # posición elegida respeta MIN_ORG_DISTANCE cuando hay lugar, que el tope de
 # organismos produce rechazo y que la carga de B2 y su enfriamiento se respetan.
@@ -158,14 +158,14 @@ func _t23() -> Dictionary:
 	world.b2_released()
 
 	return {
-		"id": "T-23 (propuesto)",
+		"id": "T-23",
 		"ok": true,
 		"detail": "la carga cancela al soltar y el enfriamiento deja ajustar los nodos",
 	}
 
 
 func _fail_t23(detail: String) -> Dictionary:
-	return {"id": "T-23 (propuesto)", "ok": false, "detail": detail}
+	return {"id": "T-23", "ok": false, "detail": detail}
 
 
 func _ok(test_id: String, detail: String) -> Dictionary:

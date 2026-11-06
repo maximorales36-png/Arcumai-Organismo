@@ -22,7 +22,7 @@ ni forma de perder: la pieza cambia con lo que hacés.
   1,2 s** siembra uno nuevo (izquierda/derecha elige cuántos nodos); **B3 +
   dirección** crea o quita un puente; **B4 mantenido 0,6 s** disuelve.
 
-Después de 90 s sin tocar nada, vuelve solo al inicio con otra escala.
+Después de 90 s sin tocar nada, vuelve solo al inicio con otra tónica.
 
 ## Qué es
 
@@ -69,13 +69,13 @@ La transición entre las dos es un zoom de medio segundo.
 
 - Cada nodo tiene una nota. La altura depende de su posición vertical dentro del
   organismo: **más arriba, más agudo**.
-- La nota está cuantizada a una escala. La escala puede ser pentatónica menor,
-  pentatónica mayor o dórica; la tónica es una nota al azar. Las dos se sortean al
-  empezar la sesión y no cambian mientras dura. Por eso cualquier combinación
-  suena consonante: no hay forma de "hacerlo mal".
-- Cada organismo pertenece a una **familia** de sonido (hay 3, con 3 variantes
-  cada una). La familia le da el timbre y el color; la variante se puede cambiar
-  nodo por nodo.
+- La nota está cuantizada a una escala. La escala es siempre la pentatónica
+  menor; la tónica es una nota al azar que se sortea al empezar la sesión y no
+  cambia mientras dura. Por eso cualquier combinación suena consonante: no hay
+  forma de "hacerlo mal".
+- Cada organismo pertenece a una **familia** de sonido (hay 3). La familia le da
+  el timbre y el color. Cada nodo puede usar una de las 4 variantes: nota,
+  cross-stick, bombo o silencio.
 - **Registro:** más nodos = organismo más grande = registro más grave. Eso ayuda
   a separar las capas en la mezcla.
 - **Mezcla por foco:** en Micro el organismo enfocado suena completo y los demás
@@ -103,7 +103,7 @@ El joystick no apunta: **navega**. Los botones son verbos fijos:
 | Joystick | Selecciona el nodo vecino en esa dirección. Mantenerlo repite el paso. |
 | B1 mantener + joystick | Arrastra el nodo seleccionado. Cambia su altura (la nota) y el largo de las hifas vecinas (el reparto del tiempo). Mientras B1 está apretado, el nodo muestra flechas en las cuatro direcciones. |
 | B1 tap, sin mover | Convierte el nodo seleccionado en nodo origen. El patrón rota respecto del tiempo fuerte. |
-| B2 tap | Cambia el sonido del nodo seleccionado: cicla las 3 variantes de la familia. |
+| B2 tap | Cambia el sonido del nodo seleccionado: cicla nota → cross-stick → bombo → silencio. |
 | B3 mantener + joystick arriba/abajo | Brillo del organismo. Arriba = más brillante (más agudos). El valor queda donde se lo dejó. |
 | B4 | Vuelve a Macro. |
 
@@ -134,8 +134,9 @@ organismo. Estas son las palancas disponibles:
    interno y la altura de ese nodo.
 2. **El origen.** Cambiar el nodo origen hace que la vuelta empiece en otro lado.
    El ciclo dura lo mismo, pero el patrón se corre respecto del tiempo fuerte.
-3. **El timbre.** Cada nodo puede usar una de las 3 variantes de la familia. Se
-   ciclan con B2 en Micro.
+3. **El timbre.** Cada nodo puede usar una de las 4 variantes: nota, cross-stick,
+   bombo o silencio. Se ciclan con B2 en Micro. El silencio deja el nodo mudo
+   pero visible: sigue marcando el pulso con el flash.
 4. **El brillo.** Abre o cierra el filtro del organismo: de opaco y redondo a
    brillante y filoso. Se cambia con B3 + arriba/abajo en Micro y queda fijo.
    El dibujo acompaña al sonido: bajar el brillo también apaga la luz del
@@ -166,9 +167,9 @@ organismo. Estas son las palancas disponibles:
 - **Estado inicial:** vista Micro, un organismo de 4 nodos, familia 0, ya sonando
   y sin puentes. No hay pantalla de título ni instrucciones.
 - **No hay fin, puntaje ni derrota.** La sesión termina cuando la persona se va.
-- Cada sesión sortea de nuevo la escala y la tónica.
+- La escala es siempre la pentatónica menor; cada sesión sortea una tónica nueva.
 - **Reinicio por inactividad:** después de 90 s sin ninguna entrada, la pantalla
-  hace un fundido de 2 s y vuelve al estado inicial, con escala y tónica nuevas.
+  hace un fundido de 2 s y vuelve al estado inicial, con una tónica nueva.
   La música sigue sonando durante la espera; el reloj no se detiene.
 - **Ningún botón queda sin respuesta:** si una acción es imposible (no hay vecino
   en esa dirección, ya hay 5 organismos, ya hay 6 puentes, se quiere disolver el
@@ -230,5 +231,6 @@ mapeo de ejes y botones se ajusta cuando se prueba en el hardware.
 - **Disolución:** eliminar un organismo con B4 mantenido en Macro.
 - **Puente:** filamento dirigido de A a B que hace sonar un nodo de B como eco.
 - **Familia:** uno de los 3 timbres base. Define el color del organismo.
-- **Variante:** una de las 3 versiones de sonido dentro de una familia.
+- **Variante:** una de las 4 versiones de sonido de un nodo: nota, cross-stick,
+  bombo o silencio.
 - **Brillo:** cuánto de los agudos del organismo pasa por el filtro.

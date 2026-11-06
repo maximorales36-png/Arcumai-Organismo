@@ -63,10 +63,10 @@ Criterio de éxito `[OJO]`: con el sonido apagado, una persona que nunca vio el 
 ## 6. Sonido
 
 - **Motor:** audio nativo de Godot (muestras con `AudioStreamPlayer`, buses y efectos). No se usa Wwise en esta versión (ver Supuestos).
-- **Familias de sonido:** cada organismo pertenece a una familia (3 al inicio, con 3 variantes cada una). Maxi aporta las muestras; hasta entonces se usan placeholders sintetizados.
-- **Altura (nota):** depende de la altura vertical del nodo dentro del organismo, cuantizada a una escala. Más arriba = más agudo.
+- **Familias de sonido:** cada organismo pertenece a una familia (3 al inicio, con 4 variantes cada una: nota, cross-stick, bombo y silencio). Maxi aporta las muestras; hasta entonces se usan placeholders sintetizados.
+- **Altura (nota):** depende de la altura vertical del nodo dentro del organismo, cuantizada a una escala. Más arriba = más agudo. Las percusiones (cross-stick y bombo) suenan a altura fija; el silencio mutea el nodo.
 - **Registro:** más pulsos = organismo más grande = registro más grave. Esto además separa las capas en la mezcla.
-- **Escala y tónica:** se sortean al iniciar la sesión (pentatónica menor, pentatónica mayor o dórica) y no cambian durante la sesión.
+- **Escala y tónica:** la escala es siempre la pentatónica menor; la tónica se sortea al iniciar la sesión y no cambia durante la sesión.
 - **Mezcla por foco:** en Micro, el organismo enfocado suena completo y los demás quedan atrás (menos volumen, más oscuros). En Macro todos suenan por igual. La distancia visual es distancia sonora.
 
 ## 7. Controles
@@ -90,7 +90,7 @@ El joystick es un control de navegación, no de apuntado. Los botones son verbos
 | Joystick | Selecciona el nodo contiguo en esa dirección |
 | B1 (mantener) + Joystick | Arrastra el nodo seleccionado (cambia altura = nota, y reparte de otra forma el tiempo entre hifas) |
 | B1 (tap, sin mover) | Convierte el nodo seleccionado en nodo origen (rota todo el patrón respecto del tiempo fuerte) |
-| B2 (tap) | Cambia el sonido del nodo seleccionado (cicla las variantes) |
+| B2 (tap) | Cambia el sonido del nodo seleccionado: cicla nota → cross-stick → bombo → silencio |
 | B3 (mantener) + Joystick arriba/abajo | Brillo del organismo (más arriba = más brillante). El valor queda donde se lo dejó |
 | B4 (tap o mantener) | Vuelve a Macro |
 
@@ -102,7 +102,7 @@ Con B2 mantenido (sembrando), presionar B4 cancela la siembra.
 1. **Estado inicial:** vista Micro, un organismo (N=4) ya vivo y sonando con una sola familia. No hay pantalla de título ni instrucciones.
 2. La persona juega. No hay fin: la sesión termina cuando se va.
 3. **Reinicio por inactividad:** tras 90 s sin ninguna entrada, el juego se reinicia al estado inicial con un fundido. Mientras tanto la música sigue sonando (es una instalación).
-4. Cada sesión sortea de nuevo escala y tónica.
+4. Cada sesión sortea de nuevo la tónica; la escala es siempre la pentatónica menor.
 
 ## 9. Decisiones
 
@@ -258,6 +258,13 @@ Con B2 mantenido (sembrando), presionar B4 cancela la siembra.
 - El metrónomo queda en −80 dB (inaudible) hasta que Maxi decida si se queda.
 - `main.gd` carga `spawn_view.gd` por `preload` en vez de por `class_name`: así la escena no depende de que el editor haya registrado la clase global del script nuevo.
 - Queda pendiente que Maxi actualice `ESPECIFICACION.md`: `MAX_ORGANISMS` (5), `SPAWN_HOLD_MS` (1200), `BRIGHTNESS_DEFAULT` (0.8) y el texto de R-33 (carga, enfriamiento y modo ajuste).
+
+**2026-11-06 (variantes de nodo y escala única)**
+- B2 en Micro pasa de 3 variantes a 4: `nota` (la afinada de la familia), `cross-stick`, `bombo` y `silencio`. El silencio mutea el nodo: sigue haciendo el flash visual pero no gasta voz.
+- Las percusiones no se transponen con la altura del nodo: suenan siempre a la misma altura. La nota afinada sigue usando R-23.
+- La escala deja de sortearse entre tres: toda la instalación usa la pentatónica menor (0, 3, 5, 7, 10). La tónica se sigue sorteando por sesión.
+- Los placeholders se regeneran con 4 variantes por familia (`tools/generate_placeholders.gd`); la variante 3 se escribe en silencio a propósito.
+- `ESPECIFICACION.md` queda actualizada con los cambios de esta tanda y de la anterior: `MAX_ORGANISMS` (5), `N_SPAWN`, `SPAWN_HOLD_MS` (1200), `SPAWN_COOLDOWN_S` (5), `DISSOLVE_HOLD_MS` (600), `BRIGHTNESS_DEFAULT` (0.8), R-24, R-25, R-33, T-17, T-23 y T-24.
 
 ## 10. Fuera de alcance v1
 
