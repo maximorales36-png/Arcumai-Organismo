@@ -31,11 +31,13 @@ offset_right = 1000.0
 offset_bottom = 360.0
 
 [node name="TickLabel" type="Label" parent="Overlay" unique_id=1372678089]
+visible = false
 layout_mode = 2
 theme_override_font_sizes/font_size = 28
 text = "tick: 0"
 
 [node name="BeatLabel" type="Label" parent="Overlay" unique_id=2086940094]
+visible = false
 layout_mode = 2
 theme_override_font_sizes/font_size = 28
 text = "beat: 0"
@@ -46,6 +48,7 @@ theme_override_font_sizes/font_size = 28
 text = "escala: 0   tónica: 0"
 
 [node name="WorldLabel" type="Label" parent="Overlay" unique_id=1039159421]
+visible = false
 layout_mode = 2
 theme_override_font_sizes/font_size = 28
 text = "modo: macro   organismos: 0"
@@ -56,21 +59,24 @@ theme_override_font_sizes/font_size = 28
 text = "nodo: —   variante: —   brillo: 0.70"
 
 [node name="ActionLabel" type="Label" parent="Overlay" unique_id=1881496125]
+visible = false
 layout_mode = 2
 theme_override_font_sizes/font_size = 28
 text = "última acción: (ninguna)"
 
 [node name="NoteLabel" type="Label" parent="Overlay" unique_id=2085061752]
+visible = false
 layout_mode = 2
 theme_override_font_sizes/font_size = 28
 text = "última nota: (ninguna)"
 
 [node name="FpsLabel" type="Label" parent="Overlay" unique_id=634403101]
+visible = false
 layout_mode = 2
 theme_override_font_sizes/font_size = 28
 text = "FPS: 0"
 
-[node name="StatusLabel" type="Label" parent="."]
+[node name="StatusLabel" type="Label" parent="." unique_id=1617337128]
 layout_mode = 1
 anchors_preset = 7
 anchor_left = 0.5
@@ -83,7 +89,6 @@ offset_right = 200.0
 offset_bottom = -40.0
 grow_horizontal = 2
 grow_vertical = 0
-visible = false
 theme_override_font_sizes/font_size = 36
 text = "borrando"
 horizontal_alignment = 1
